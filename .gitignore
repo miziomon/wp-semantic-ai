@@ -1,0 +1,28 @@
+# Dipendenze
+/vendor/
+/node_modules/
+
+# Build JS/CSS
+/build/
+
+# wp-env
+/.wp-env/
+/.wp-env.override.json
+
+# IDE e OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# PHPStan
+/phpstan-baseline.neon
+
+# Test coverage
+/coverage/
+/.phpunit.cache/
+
+# Log
+*.log
