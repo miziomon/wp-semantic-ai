@@ -135,9 +135,10 @@ final class Plugin {
 		$controller->register();
 	}
 
-	/** Registra la pagina delle impostazioni (delegato a SettingsPage). */
+	/** Registra la pagina delle impostazioni tramite SettingsPage. */
 	public function register_settings_page(): void {
-		// Sarà implementato in Fase 6.
+		$settings_page = new \Mavida\SemanticInternalLinks\Settings\SettingsPage();
+		$settings_page->register();
 	}
 
 	/**
