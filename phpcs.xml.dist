@@ -5,7 +5,9 @@
     <!-- Percorsi da analizzare -->
     <file>src/</file>
     <file>semantic-internal-links.php</file>
-    <file>phpstan-bootstrap.php</file>
+
+    <!-- phpstan-bootstrap.php è un file di stub solo per l'analisi statica. -->
+    <exclude-pattern>phpstan-bootstrap.php</exclude-pattern>
 
     <!-- Escludi generato e dipendenze -->
     <exclude-pattern>*/vendor/*</exclude-pattern>

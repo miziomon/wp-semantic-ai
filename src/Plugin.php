@@ -43,6 +43,23 @@ final class Plugin {
 		add_action( 'enqueue_block_editor_assets', [ $this, 'enqueue_editor_assets' ] );
 		add_action( 'rest_api_init', [ $this, 'register_rest_routes' ] );
 		add_action( 'admin_menu', [ $this, 'register_settings_page' ] );
+		// Invalida la cache AI quando il post viene salvato.
+		add_action( 'save_post', [ $this, 'invalidate_cache_on_save' ] );
+	}
+
+	/**
+	 * Invalida la cache dei suggerimenti AI per il post appena salvato.
+	 *
+	 * @param int $post_id ID del post salvato.
+	 */
+	public function invalidate_cache_on_save( int $post_id ): void {
+		// Salta le revisioni automatiche.
+		if ( wp_is_post_revision( $post_id ) ) {
+			return;
+		}
+
+		$cache = new \Mavida\SemanticInternalLinks\Ai\SuggestionCache();
+		$cache->invalidate_for_post( $post_id );
 	}
 
 	/** Carica le traduzioni del plugin. */
@@ -102,9 +119,20 @@ final class Plugin {
 		);
 	}
 
-	/** Registra le route REST (delegato al controller). */
+	/** Registra le route REST tramite SuggestController. */
 	public function register_rest_routes(): void {
-		// Sarà implementato in Fase 5.
+		$controller = new \Mavida\SemanticInternalLinks\Rest\SuggestController(
+			new \Mavida\SemanticInternalLinks\Ai\LinkSuggester(
+				new \Mavida\SemanticInternalLinks\Ai\PromptBuilder(),
+				new \Mavida\SemanticInternalLinks\Ai\SuggestionCache(),
+				new \Mavida\SemanticInternalLinks\Ai\ResponseValidator()
+			),
+			new \Mavida\SemanticInternalLinks\Content\CandidateProvider(
+				new \Mavida\SemanticInternalLinks\Content\KeywordExtractor()
+			)
+		);
+
+		$controller->register();
 	}
 
 	/** Registra la pagina delle impostazioni (delegato a SettingsPage). */
