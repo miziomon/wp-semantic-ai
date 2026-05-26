@@ -1,0 +1,29 @@
+{
+    "name": "semantic-internal-links",
+    "version": "0.1.0",
+    "description": "AI-powered semantic internal links for WordPress Gutenberg editor.",
+    "private": true,
+    "scripts": {
+        "build": "wp-scripts build",
+        "start": "wp-scripts start",
+        "lint:js": "wp-scripts lint-js",
+        "lint:css": "wp-scripts lint-style",
+        "packages-update": "wp-scripts packages-update"
+    },
+    "main": "build/index.js",
+    "dependencies": {
+        "@wordpress/api-fetch": "*",
+        "@wordpress/block-editor": "*",
+        "@wordpress/components": "*",
+        "@wordpress/data": "*",
+        "@wordpress/editor": "*",
+        "@wordpress/element": "*",
+        "@wordpress/i18n": "*",
+        "@wordpress/plugins": "*",
+        "@wordpress/rich-text": "*"
+    },
+    "devDependencies": {
+        "@wordpress/env": "*",
+        "@wordpress/scripts": "*"
+    }
+}

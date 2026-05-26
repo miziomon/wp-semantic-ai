@@ -1,0 +1,8 @@
+{
+    "core": "WordPress/WordPress#7.0",
+    "phpVersion": "8.1",
+    "plugins": [ "." ],
+    "lifecycleScripts": {
+        "afterStart": "wp-env run cli wp plugin install ai-provider-for-anthropic --activate"
+    }
+}

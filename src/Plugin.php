@@ -1,0 +1,135 @@
+<?php
+/**
+ * Classe principale del plugin: registra tutti gli hook WordPress.
+ *
+ * @package Mavida\SemanticInternalLinks
+ */
+
+declare( strict_types=1 );
+
+namespace Mavida\SemanticInternalLinks;
+
+/**
+ * Plugin entry-point. Usa il pattern singleton leggero: una sola istanza
+ * viene creata da semantic-internal-links.php tramite instance()->boot().
+ */
+final class Plugin {
+
+	/**
+	 * Istanza singleton del plugin.
+	 *
+	 * @var self|null
+	 */
+	private static ?self $instance = null;
+
+	/** Impedisce istanziazione diretta. */
+	private function __construct() {}
+
+	/** Restituisce l'istanza singleton. */
+	public static function instance(): self {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+
+		return self::$instance;
+	}
+
+	/**
+	 * Registra tutti gli hook WordPress.
+	 * Chiamato una sola volta dal file principale del plugin.
+	 */
+	public function boot(): void {
+		add_action( 'init', [ $this, 'load_text_domain' ] );
+		add_action( 'enqueue_block_editor_assets', [ $this, 'enqueue_editor_assets' ] );
+		add_action( 'rest_api_init', [ $this, 'register_rest_routes' ] );
+		add_action( 'admin_menu', [ $this, 'register_settings_page' ] );
+	}
+
+	/** Carica le traduzioni del plugin. */
+	public function load_text_domain(): void {
+		load_plugin_textdomain(
+			'semantic-internal-links',
+			false,
+			dirname( plugin_basename( SIL_PLUGIN_FILE ) ) . '/languages'
+		);
+	}
+
+	/**
+	 * Accoda lo script dell'editor Gutenberg.
+	 * Legge deps e version da build/index.asset.php generato da @wordpress/scripts.
+	 */
+	public function enqueue_editor_assets(): void {
+		$asset_file = SIL_PLUGIN_DIR . 'build/index.asset.php';
+
+		// Il file asset viene generato da "npm run build": non disponibile in sviluppo
+		// finché non si esegue almeno una build.
+		if ( ! file_exists( $asset_file ) ) {
+			return;
+		}
+
+		/* @var array{dependencies: string[], version: string} $asset */
+		$asset = require $asset_file; // phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
+
+		wp_enqueue_script(
+			'semantic-internal-links-editor',
+			SIL_PLUGIN_URL . 'build/index.js',
+			$asset['dependencies'],
+			$asset['version'],
+			false
+		);
+
+		wp_set_script_translations(
+			'semantic-internal-links-editor',
+			'semantic-internal-links',
+			SIL_PLUGIN_DIR . 'languages'
+		);
+
+		// Passa al JS i dati di bootstrap (flag provider, nonce REST).
+		wp_localize_script(
+			'semantic-internal-links-editor',
+			'silData',
+			[
+				'restUrl' => esc_url_raw( rest_url( 'semantic-internal-links/v1' ) ),
+				'nonce'   => wp_create_nonce( 'wp_rest' ),
+			]
+		);
+
+		wp_enqueue_style(
+			'semantic-internal-links-editor',
+			SIL_PLUGIN_URL . 'build/index.css',
+			[],
+			$asset['version']
+		);
+	}
+
+	/** Registra le route REST (delegato al controller). */
+	public function register_rest_routes(): void {
+		// Sarà implementato in Fase 5.
+	}
+
+	/** Registra la pagina delle impostazioni (delegato a SettingsPage). */
+	public function register_settings_page(): void {
+		// Sarà implementato in Fase 6.
+	}
+
+	/**
+	 * Helper per leggere un'opzione del plugin con il suo default.
+	 *
+	 * @param string $key Chiave dell'opzione (senza prefisso).
+	 * @return mixed
+	 */
+	public static function get_option( string $key ): mixed {
+		$defaults = [
+			'max_candidates'        => 50,
+			'max_links'             => 8,
+			'max_emphasis'          => 10,
+			'chunk_threshold_chars' => 20000,
+			'target_post_types'     => [ 'post', 'page' ],
+			'cache_ttl'             => DAY_IN_SECONDS,
+		];
+
+		$value = get_option( 'sil_' . $key, $defaults[ $key ] ?? null );
+
+		return $value;
+	}
+}

@@ -2,8 +2,9 @@
 /vendor/
 /node_modules/
 
-# Build JS/CSS
+# Build JS/CSS (generato da npm run build)
 /build/
+!/build/index.asset.php
 
 # wp-env
 /.wp-env/

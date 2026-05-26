@@ -1,0 +1,17 @@
+includes:
+    - vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+    level: 8
+    paths:
+        - src
+        - semantic-internal-links.php
+    bootstrapFiles:
+        - vendor/php-stubs/wordpress-stubs/wordpress-stubs.php
+        - phpstan-bootstrap.php
+    excludePaths:
+        - vendor
+        - node_modules (?)
+        - build (?)
+    # Ignora errori WP conosciuti (rimuovere se si alza il livello)
+    ignoreErrors: []

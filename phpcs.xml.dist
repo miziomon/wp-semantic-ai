@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<ruleset name="Semantic Internal Links">
+    <description>PHPCS ruleset - WordPress Coding Standards con PSR-4</description>
+
+    <!-- Percorsi da analizzare -->
+    <file>src/</file>
+    <file>semantic-internal-links.php</file>
+    <file>phpstan-bootstrap.php</file>
+
+    <!-- Escludi generato e dipendenze -->
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/node_modules/*</exclude-pattern>
+    <exclude-pattern>*/build/*</exclude-pattern>
+
+    <!-- Versione PHP target -->
+    <config name="testVersion" value="8.1-"/>
+
+    <!-- Text domain -->
+    <config name="text_domain" value="semantic-internal-links"/>
+
+    <!-- Prefisso per funzioni globali e costanti non-namespace -->
+    <config name="prefixes" value="sil_,SIL_"/>
+
+    <!-- Ruleset principale -->
+    <rule ref="WordPress">
+        <!-- Consenti short-array syntax (PHP 8.1+) -->
+        <exclude name="Universal.Arrays.DisallowShortArraySyntax"/>
+
+        <!--
+            Il plugin usa PSR-4 con autoload Composer: i file di classe si chiamano
+            Plugin.php, SuggestController.php ecc. (PascalCase, senza prefisso
+            "class-"). Escludiamo la sniff sui nomi file WPCS che si aspetterebbe
+            "class-plugin.php".
+        -->
+        <exclude name="WordPress.Files.FileName"/>
+
+        <!--
+            Le namespace PSR-4 (Mavida\SemanticInternalLinks\*) non richiedono
+            il prefisso globale: lo scope è già garantito dal namespace.
+            Il prefisso sil_ vale solo per funzioni/costanti globali.
+        -->
+        <exclude name="WordPress.NamingConventions.PrefixAllGlobals"/>
+
+        <!--
+            Falso positivo: Squiz.PHP.CommentedOutCode segnala le annotazioni
+            inline "@var" di PHPStan (/* @var Type $x */) come codice commentato.
+            Le annotazioni di tipo non sono codice commentato.
+        -->
+        <exclude name="Squiz.PHP.CommentedOutCode"/>
+    </rule>
+
+</ruleset>
