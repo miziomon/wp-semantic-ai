@@ -1,0 +1,29 @@
+# Changelog
+
+Tutte le modifiche rilevanti a questo progetto sono documentate in questo file.
+
+Il formato segue [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
+e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.0] - 2026-05-27
+
+### Added
+
+- Sidebar Gutenberg "Semantic Internal Links" con pulsante di analisi e rilevamento disponibilità provider AI.
+- Endpoint REST `POST /semantic-internal-links/v1/suggest` con autenticazione via nonce WordPress.
+- Pre-filtro candidati basato su tassonomie condivise (category, post_tag) con fallback fulltext su `post` e `page`.
+- Integrazione con WP AI Client nativo (`wp_ai_client_prompt`) con JSON schema strutturato (§6 spec).
+- Modale di anteprima con applicazione selettiva: due sezioni (link interni / enfasi semantica), controlli "Seleziona tutto / Deseleziona tutto", spinner di caricamento e stati di errore espliciti.
+- Applicazione dei suggerimenti via `@wordpress/rich-text` (`applyFormat`, `toHTMLString`, `updateBlockAttributes`): ricerca per occorrenza n-esima, skip di range già formattati, snackbar di riepilogo.
+- Cache transient 24h delle risposte AI con chiave hash (content + candidateIds + schemaVersion + locale); invalidazione automatica su `save_post`.
+- Chunking automatico degli articoli lunghi: divisione dei blocchi in chunk sotto la soglia configurata, N chiamate AI separate e merge con deduplicazione.
+- Pagina Impostazioni (Settings API) sotto *Impostazioni → Semantic Internal Links* con sei parametri configurabili.
+- Stili SCSS in metodologia BEM (`.sil-modal`, `.sil-sidebar`, elementi e modificatori).
+- i18n completo con text domain `semantic-internal-links` su tutte le stringhe UI.
+- Filtri di estensione: `sil_candidates`, `sil_system_instruction`, `sil_suggestion_validate_link`.
+- Tooling: `@wordpress/scripts`, `@wordpress/env`, PHPCS (WPCS), PHPStan livello 8 con stubs WP 7.0.
+
+[Unreleased]: https://github.com/mavida/semantic-internal-links/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/mavida/semantic-internal-links/releases/tag/v0.1.0

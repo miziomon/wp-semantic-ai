@@ -53,6 +53,14 @@ assets/scss/          # Stili SCSS in metodologia BEM
 build/                # Asset compilati (generato da npm run build)
 ```
 
+## i18n
+
+Genera il file `.pot` per le traduzioni:
+
+```bash
+wp i18n make-pot . languages/semantic-internal-links.pot --domain=semantic-internal-links
+```
+
 ## Impostazioni
 
 Disponibili in **Impostazioni → Semantic Internal Links**:
