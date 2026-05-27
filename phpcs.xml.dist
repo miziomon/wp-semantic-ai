@@ -9,10 +9,12 @@
     <!-- phpstan-bootstrap.php è un file di stub solo per l'analisi statica. -->
     <exclude-pattern>phpstan-bootstrap.php</exclude-pattern>
 
-    <!-- Escludi generato e dipendenze -->
+    <!-- Escludi generato, dipendenze e file JS/JSX (gestiti da wp-scripts lint-js) -->
     <exclude-pattern>*/vendor/*</exclude-pattern>
     <exclude-pattern>*/node_modules/*</exclude-pattern>
     <exclude-pattern>*/build/*</exclude-pattern>
+    <exclude-pattern>*/src/editor/*</exclude-pattern>
+    <exclude-pattern>*/assets/*</exclude-pattern>
 
     <!-- Versione PHP target -->
     <config name="testVersion" value="8.1-"/>

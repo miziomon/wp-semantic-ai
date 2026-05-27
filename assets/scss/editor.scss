@@ -1,0 +1,108 @@
+/**
+ * Stili BEM per il plugin Semantic Internal Links nell'editor Gutenberg.
+ *
+ * Blocco principale: .sil-modal
+ * Blocco secondario: .sil-sidebar
+ */
+
+/* =========================================================
+   Sidebar
+   ========================================================= */
+
+.sil-sidebar {
+	padding: 12px;
+
+	&__description {
+		color: #757575;
+		font-size: 13px;
+		margin-bottom: 12px;
+	}
+
+	&__button {
+		width: 100%;
+		justify-content: center;
+
+		.components-spinner {
+			margin-right: 6px;
+		}
+	}
+}
+
+/* =========================================================
+   Modal — loading
+   ========================================================= */
+
+.sil-modal {
+
+	&__loading {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 20px 0;
+
+		p {
+			margin: 0;
+			color: #757575;
+		}
+	}
+
+	/* =====================================================
+	   Modal — sezioni (PanelBody)
+	   ===================================================== */
+
+	&__section {
+		margin-bottom: 4px;
+	}
+
+	&__section-controls {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		margin-bottom: 8px;
+		font-size: 12px;
+		color: #757575;
+	}
+
+	/* =====================================================
+	   Modal — righe suggerimento
+	   ===================================================== */
+
+	&__row {
+		padding: 8px;
+		border-radius: 2px;
+		transition: background-color 0.1s ease;
+
+		&--selected {
+			background-color: #f0f6fc;
+		}
+
+		&--applied {
+			opacity: 0.5;
+			pointer-events: none;
+		}
+
+		.components-checkbox-control {
+			margin-bottom: 2px;
+		}
+	}
+
+	&__rationale {
+		color: #757575;
+		font-size: 12px;
+		font-style: italic;
+		margin: 2px 0 0 24px;
+	}
+
+	/* =====================================================
+	   Modal — footer
+	   ===================================================== */
+
+	&__footer {
+		display: flex;
+		justify-content: flex-end;
+		gap: 8px;
+		padding-top: 12px;
+		border-top: 1px solid #e0e0e0;
+		margin-top: 12px;
+	}
+}

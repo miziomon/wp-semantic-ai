@@ -31,10 +31,14 @@ function findOccurrenceOffset( plainText, phrase, occurrence ) {
 
 	while ( searchFrom < plainText.length ) {
 		const idx = plainText.indexOf( phrase, searchFrom );
-		if ( idx === -1 ) return -1;
+		if ( idx === -1 ) {
+			return -1;
+		}
 
 		found++;
-		if ( found === occurrence ) return idx;
+		if ( found === occurrence ) {
+			return idx;
+		}
 
 		searchFrom = idx + 1;
 	}
@@ -79,8 +83,10 @@ function getContentAttribute( blockName ) {
  * @returns {'applied'|'skipped'} Esito dell'operazione.
  */
 function applyLinkSuggestion( suggestion, clientId ) {
-	const block     = select( 'core/block-editor' ).getBlock( clientId );
-	if ( ! block ) return 'skipped';
+	const block = select( 'core/block-editor' ).getBlock( clientId );
+	if ( ! block ) {
+		return 'skipped';
+	}
 
 	const attr      = getContentAttribute( block.name );
 	const html      = block.attributes?.[ attr ] ?? '';
@@ -89,14 +95,20 @@ function applyLinkSuggestion( suggestion, clientId ) {
 	const phrase    = suggestion.anchorText ?? '';
 	const occ       = suggestion.occurrence ?? 1;
 
-	if ( ! phrase ) return 'skipped';
+	if ( ! phrase ) {
+		return 'skipped';
+	}
 
 	const start = findOccurrenceOffset( plainText, phrase, occ );
-	if ( start === -1 ) return 'skipped';
+	if ( start === -1 ) {
+		return 'skipped';
+	}
 
 	const end = start + phrase.length;
 
-	if ( rangeHasFormat( richValue, 'core/link', start, end ) ) return 'skipped';
+	if ( rangeHasFormat( richValue, 'core/link', start, end ) ) {
+		return 'skipped';
+	}
 
 	const newValue = applyFormat(
 		richValue,
@@ -111,9 +123,10 @@ function applyLinkSuggestion( suggestion, clientId ) {
 		end
 	);
 
-	dispatch( 'core/block-editor' ).updateBlockAttributes( clientId, {
-		[ attr ]: toHTMLString( { value: newValue } ),
-	} );
+	dispatch( 'core/block-editor' ).updateBlockAttributes(
+		clientId,
+		{ [ attr ]: toHTMLString( { value: newValue } ) }
+	);
 
 	return 'applied';
 }
@@ -126,11 +139,15 @@ function applyLinkSuggestion( suggestion, clientId ) {
  * @returns {'applied'|'skipped'} Esito dell'operazione.
  */
 function applyEmphasisSuggestion( suggestion, clientId ) {
-	const block      = select( 'core/block-editor' ).getBlock( clientId );
-	if ( ! block ) return 'skipped';
+	const block = select( 'core/block-editor' ).getBlock( clientId );
+	if ( ! block ) {
+		return 'skipped';
+	}
 
 	const formatType = EMPHASIS_FORMAT_MAP[ suggestion.format ];
-	if ( ! formatType ) return 'skipped';
+	if ( ! formatType ) {
+		return 'skipped';
+	}
 
 	const attr      = getContentAttribute( block.name );
 	const html      = block.attributes?.[ attr ] ?? '';
@@ -139,14 +156,20 @@ function applyEmphasisSuggestion( suggestion, clientId ) {
 	const phrase    = suggestion.phrase ?? '';
 	const occ       = suggestion.occurrence ?? 1;
 
-	if ( ! phrase ) return 'skipped';
+	if ( ! phrase ) {
+		return 'skipped';
+	}
 
 	const start = findOccurrenceOffset( plainText, phrase, occ );
-	if ( start === -1 ) return 'skipped';
+	if ( start === -1 ) {
+		return 'skipped';
+	}
 
 	const end = start + phrase.length;
 
-	if ( rangeHasFormat( richValue, formatType, start, end ) ) return 'skipped';
+	if ( rangeHasFormat( richValue, formatType, start, end ) ) {
+		return 'skipped';
+	}
 
 	const newValue = applyFormat(
 		richValue,
@@ -155,9 +178,10 @@ function applyEmphasisSuggestion( suggestion, clientId ) {
 		end
 	);
 
-	dispatch( 'core/block-editor' ).updateBlockAttributes( clientId, {
-		[ attr ]: toHTMLString( { value: newValue } ),
-	} );
+	dispatch( 'core/block-editor' ).updateBlockAttributes(
+		clientId,
+		{ [ attr ]: toHTMLString( { value: newValue } ) }
+	);
 
 	return 'applied';
 }
@@ -174,14 +198,20 @@ export function applyAllSuggestions( selected, blockMap ) {
 
 	for ( const link of ( selected.links ?? [] ) ) {
 		const clientId = blockMap[ link.blockIndex ];
-		if ( ! clientId ) { skipped++; continue; }
+		if ( ! clientId ) {
+			skipped++;
+			continue;
+		}
 		const result = applyLinkSuggestion( link, clientId );
 		result === 'applied' ? applied++ : skipped++;
 	}
 
 	for ( const emph of ( selected.emphasis ?? [] ) ) {
 		const clientId = blockMap[ emph.blockIndex ];
-		if ( ! clientId ) { skipped++; continue; }
+		if ( ! clientId ) {
+			skipped++;
+			continue;
+		}
 		const result = applyEmphasisSuggestion( emph, clientId );
 		result === 'applied' ? applied++ : skipped++;
 	}
