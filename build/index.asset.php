@@ -1,11 +1,1 @@
-<?php
-/**
- * File asset stub per PHPStan e sviluppo locale.
- * Viene sovrascritto da "npm run build" con deps reali e version hash.
- *
- * @return array{dependencies: string[], version: string}
- */
-return [
-	'dependencies' => [],
-	'version'      => '0.0.0-dev',
-];
+<?php return array('dependencies' => array('react-jsx-runtime', 'wp-api-fetch', 'wp-components', 'wp-data', 'wp-editor', 'wp-element', 'wp-i18n', 'wp-plugins', 'wp-rich-text'), 'version' => 'a696ba34bf0de287dfae');

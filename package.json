@@ -4,8 +4,8 @@
     "description": "AI-powered semantic internal links for WordPress Gutenberg editor.",
     "private": true,
     "scripts": {
-        "build": "wp-scripts build",
-        "start": "wp-scripts start",
+        "build": "wp-scripts build src/editor/index.js",
+        "start": "wp-scripts start src/editor/index.js",
         "lint:js": "wp-scripts lint-js",
         "lint:css": "wp-scripts lint-style",
         "packages-update": "wp-scripts packages-update"
