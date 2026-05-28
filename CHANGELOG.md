@@ -7,6 +7,17 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-28
+
+### Changed
+
+- Plugin rinominato da "Semantic Internal Links" a **"Semantic AI"**: nome, slug, text domain (`semantic-ai`), prefissi opzioni DB (`sai_`), costanti PHP (`SAI_`), classi CSS (`.sai-`), namespace REST (`/semantic-ai/v1/`).
+- File principale rinominato da `semantic-internal-links.php` a `semantic-ai.php`.
+
+### Fixed
+
+- Distribuzione ZIP da GitHub ora funziona senza `composer install`: l'autoloader Composer è stato sostituito con un `spl_autoload_register` nativo. `vendor/` è necessario solo per gli strumenti di sviluppo (phpcs, phpstan).
+
 ## [0.1.0] - 2026-05-27
 
 ### Added
@@ -25,5 +36,6 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Filtri di estensione: `SAI_candidates`, `SAI_system_instruction`, `SAI_suggestion_validate_link`.
 - Tooling: `@wordpress/scripts`, `@wordpress/env`, PHPCS (WPCS), PHPStan livello 8 con stubs WP 7.0.
 
-[Unreleased]: https://github.com/mavida/semantic-ai/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/mavida/semantic-ai/releases/tag/v0.1.0
+[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/miziomon/wp-semantic-ai/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/miziomon/wp-semantic-ai/releases/tag/v0.1.0

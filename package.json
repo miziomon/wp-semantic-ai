@@ -1,6 +1,6 @@
 {
     "name": "semantic-ai",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "AI-powered Semantic AI for WordPress Gutenberg editor.",
     "private": true,
     "scripts": {
