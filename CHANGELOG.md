@@ -7,6 +7,18 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-05-28
+
+### Added
+
+- Selezione e ordinamento modelli AI nella pagina Impostazioni → Semantic AI: nuova sezione "Preferenze modelli AI" con lista interattiva (pulsanti ▲/▼ per priorità, ✕ per rimuovere, menu a tendina per aggiungere). Catalogo di 10 modelli confermati: Claude Opus 4.8, Sonnet 4.6, Haiku 4.5 (Anthropic); Gemini 3.5 Flash, 3.1 Pro Preview, 2.5 Pro, 2.5 Flash (Google); GPT-4.1, GPT-4.1 mini, GPT-4o (OpenAI). Il WP AI Client usa il primo modello nell'elenco supportato dal provider configurato.
+
+### Changed
+
+- Modello di fallback Gemini aggiornato da `gemini-3.1-pro-preview` a `gemini-3.5-flash` (stable, top performer).
+- Modello di fallback OpenAI aggiornato da `gpt-5.4` a `gpt-4.1`.
+- `LinkSuggester::call_ai()` ora legge l'ordine dei modelli da `Plugin::get_option('model_preferences')` anziché dalla costante hardcoded.
+
 ## [0.2.2] - 2026-05-28
 
 ### Added
@@ -50,7 +62,8 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Filtri di estensione: `SAI_candidates`, `SAI_system_instruction`, `SAI_suggestion_validate_link`.
 - Tooling: `@wordpress/scripts`, `@wordpress/env`, PHPCS (WPCS), PHPStan livello 8 con stubs WP 7.0.
 
-[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/miziomon/wp-semantic-ai/compare/v0.1.0...v0.2.0

@@ -28,8 +28,8 @@ class LinkSuggester {
 	 */
 	private const MODEL_PREFERENCES = [
 		'claude-sonnet-4-6',
-		'gemini-3.1-pro-preview',
-		'gpt-5.4',
+		'gemini-3.5-flash',
+		'gpt-4.1',
 	];
 
 	/**
@@ -232,11 +232,17 @@ class LinkSuggester {
 			return $builder;
 		}
 
+		$raw_prefs   = Plugin::get_option( 'model_preferences' );
+		/* @var string[] $model_prefs */
+		$model_prefs = ( is_array( $raw_prefs ) && count( $raw_prefs ) > 0 )
+			? array_values( array_map( 'strval', $raw_prefs ) )
+			: self::MODEL_PREFERENCES;
+
 		$builder
 			->using_system_instruction( $system_instruction )
 			->using_temperature( 0.2 )
 			->using_max_tokens( 4000 )
-			->using_model_preference( ...self::MODEL_PREFERENCES )
+			->using_model_preference( ...$model_prefs )
 			->as_json_response( $json_schema );
 
 		$raw_json = $builder->generate_text();

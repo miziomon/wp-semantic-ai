@@ -157,6 +157,7 @@ final class Plugin {
 			'chunk_threshold_chars' => 20000,
 			'target_post_types'     => [ 'post', 'page' ],
 			'cache_ttl'             => DAY_IN_SECONDS,
+			'model_preferences'     => [ 'claude-sonnet-4-6', 'gemini-3.5-flash', 'gpt-4.1' ],
 		];
 
 		$value = get_option( 'sai_' . $key, $defaults[ $key ] ?? null );

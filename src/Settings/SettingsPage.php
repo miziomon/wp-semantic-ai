@@ -9,6 +9,8 @@ declare( strict_types=1 );
 
 namespace Mavida\SemanticInternalLinks\Settings;
 
+use Mavida\SemanticInternalLinks\Plugin;
+
 /**
  * Registra e renderizza la pagina "Impostazioni → Semantic AI".
  *
@@ -19,6 +21,7 @@ namespace Mavida\SemanticInternalLinks\Settings;
  * - chunk_threshold_chars: soglia caratteri oltre la quale chunking dell'articolo.
  * - target_post_types: tipi di post da includere come candidati.
  * - cache_ttl: TTL in secondi della cache transient delle risposte AI.
+ * - model_preferences: ordine di preferenza dei modelli AI (array di model ID).
  */
 class SettingsPage {
 
@@ -31,6 +34,30 @@ class SettingsPage {
 	/** Nome della sezione principale. */
 	private const SECTION_MAIN = 'sai_section_main';
 
+	/** Nome della sezione preferenze modelli. */
+	private const SECTION_MODELS = 'sai_section_models';
+
+	/**
+	 * Catalogo dei modelli AI disponibili per la selezione.
+	 *
+	 * @var array<int, array{id: string, label: string, provider: string}>
+	 */
+	private const MODEL_CATALOG = [
+		[ 'id' => 'claude-opus-4-8',        'label' => 'Claude Opus 4.8',        'provider' => 'Anthropic' ],
+		[ 'id' => 'claude-sonnet-4-6',       'label' => 'Claude Sonnet 4.6',      'provider' => 'Anthropic' ],
+		[ 'id' => 'claude-haiku-4-5',        'label' => 'Claude Haiku 4.5',       'provider' => 'Anthropic' ],
+		[ 'id' => 'gemini-3.5-flash',        'label' => 'Gemini 3.5 Flash',       'provider' => 'Google'    ],
+		[ 'id' => 'gemini-3.1-pro-preview',  'label' => 'Gemini 3.1 Pro Preview', 'provider' => 'Google'    ],
+		[ 'id' => 'gemini-2.5-pro',          'label' => 'Gemini 2.5 Pro',         'provider' => 'Google'    ],
+		[ 'id' => 'gemini-2.5-flash',        'label' => 'Gemini 2.5 Flash',       'provider' => 'Google'    ],
+		[ 'id' => 'gpt-4.1',                 'label' => 'GPT-4.1',                'provider' => 'OpenAI'    ],
+		[ 'id' => 'gpt-4.1-mini',            'label' => 'GPT-4.1 mini',           'provider' => 'OpenAI'    ],
+		[ 'id' => 'gpt-4o',                  'label' => 'GPT-4o',                 'provider' => 'OpenAI'    ],
+	];
+
+	/** Preferenze di default se l'opzione non è ancora stata salvata. */
+	private const DEFAULT_MODEL_PREFERENCES = [ 'claude-sonnet-4-6', 'gemini-3.5-flash', 'gpt-4.1' ];
+
 	/** Registra la voce di menu e la pagina impostazioni. */
 	public function register(): void {
 		add_options_page(
@@ -42,6 +69,7 @@ class SettingsPage {
 		);
 
 		add_action( 'admin_init', [ $this, 'register_settings' ] );
+		add_action( 'admin_footer-settings_page_' . self::MENU_SLUG, [ $this, 'render_model_prefs_script' ] );
 	}
 
 	/** Registra le opzioni, le sezioni e i campi tramite Settings API. */
@@ -52,6 +80,13 @@ class SettingsPage {
 			self::SECTION_MAIN,
 			__( 'Parametri di analisi', 'semantic-ai' ),
 			[ $this, 'render_section_description' ],
+			self::MENU_SLUG
+		);
+
+		add_settings_section(
+			self::SECTION_MODELS,
+			__( 'Preferenze modelli AI', 'semantic-ai' ),
+			[ $this, 'render_section_models_description' ],
 			self::MENU_SLUG
 		);
 
@@ -85,6 +120,14 @@ class SettingsPage {
 		) . '</p>';
 	}
 
+	/** Renderizza la descrizione della sezione modelli AI. */
+	public function render_section_models_description(): void {
+		echo '<p>' . esc_html__(
+			'Il WP AI Client usa il primo modello nell\'elenco supportato dal provider configurato. Sposta i modelli con ▲/▼ per cambiare la priorità.',
+			'semantic-ai'
+		) . '</p>';
+	}
+
 	/** Registra tutte le opzioni del plugin con i relativi sanitize callback. */
 	private function register_all_settings(): void {
 		$options = [
@@ -94,6 +137,7 @@ class SettingsPage {
 			'sai_chunk_threshold_chars' => [ $this, 'sanitize_positive_int' ],
 			'sai_target_post_types'     => [ $this, 'sanitize_post_types' ],
 			'sai_cache_ttl'             => [ $this, 'sanitize_positive_int' ],
+			'sai_model_preferences'     => [ $this, 'sanitize_model_preferences' ],
 		];
 
 		foreach ( $options as $option_name => $sanitize_callback ) {
@@ -107,7 +151,7 @@ class SettingsPage {
 
 	/** Aggiunge tutti i campi della pagina impostazioni. */
 	private function add_all_fields(): void {
-		$fields = [
+		$main_fields = [
 			[
 				'id'       => 'sai_max_candidates',
 				'label'    => __( 'Max candidati', 'semantic-ai' ),
@@ -180,7 +224,7 @@ class SettingsPage {
 			],
 		];
 
-		foreach ( $fields as $field ) {
+		foreach ( $main_fields as $field ) {
 			add_settings_field(
 				$field['id'],
 				$field['label'],
@@ -190,6 +234,14 @@ class SettingsPage {
 				$field['args']
 			);
 		}
+
+		add_settings_field(
+			'sai_model_preferences',
+			__( 'Ordine di preferenza', 'semantic-ai' ),
+			[ $this, 'render_model_preferences_field' ],
+			self::MENU_SLUG,
+			self::SECTION_MODELS
+		);
 	}
 
 	/**
@@ -249,6 +301,228 @@ class SettingsPage {
 		}
 	}
 
+	/** Renderizza il campo di ordinamento dei modelli AI. */
+	public function render_model_preferences_field(): void {
+		$raw_saved   = Plugin::get_option( 'model_preferences' );
+		$saved_prefs = is_array( $raw_saved ) ? array_values( $raw_saved ) : self::DEFAULT_MODEL_PREFERENCES;
+
+		$catalog_by_id = [];
+		foreach ( self::MODEL_CATALOG as $model ) {
+			$catalog_by_id[ $model['id'] ] = $model;
+		}
+
+		$active_models = [];
+		foreach ( $saved_prefs as $model_id ) {
+			$id = (string) $model_id;
+			if ( isset( $catalog_by_id[ $id ] ) ) {
+				$active_models[] = $catalog_by_id[ $id ];
+			}
+		}
+
+		if ( empty( $active_models ) ) {
+			foreach ( self::DEFAULT_MODEL_PREFERENCES as $model_id ) {
+				if ( isset( $catalog_by_id[ $model_id ] ) ) {
+					$active_models[] = $catalog_by_id[ $model_id ];
+				}
+			}
+		}
+
+		$active_ids   = array_column( $active_models, 'id' );
+		$hidden_value = (string) wp_json_encode( $active_ids );
+
+		echo '<div id="sai-model-prefs-wrap">';
+		echo '<ul id="sai-model-list" style="margin:0;padding:0;list-style:none;max-width:560px;">';
+
+		foreach ( $active_models as $i => $model ) {
+			printf(
+				'<li class="sai-model-item" data-model-id="%s" data-provider="%s" style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#fff;border:1px solid #ddd;margin-bottom:4px;border-radius:3px;">'
+				. '<span class="sai-pos" style="color:#888;min-width:24px;font-weight:600">%d.</span>'
+				. '<strong>%s</strong>'
+				. '<span style="color:#888;font-size:12px">(%s)</span>'
+				. '<code style="color:#555;font-size:11px;background:#f6f6f6;padding:1px 4px;border-radius:2px">%s</code>'
+				. '<span style="flex:1"></span>'
+				. '<button type="button" class="button button-small sai-move-up" title="%s">&#9650;</button>'
+				. '<button type="button" class="button button-small sai-move-down" title="%s" style="margin-left:2px">&#9660;</button>'
+				. '<button type="button" class="button button-small sai-remove" title="%s" style="margin-left:6px;color:#a00">&#10005;</button>'
+				. '</li>',
+				esc_attr( $model['id'] ),
+				esc_attr( $model['provider'] ),
+				$i + 1,
+				esc_html( $model['label'] ),
+				esc_html( $model['provider'] ),
+				esc_attr( $model['id'] ),
+				esc_attr__( 'Sposta su', 'semantic-ai' ),
+				esc_attr__( 'Sposta giù', 'semantic-ai' ),
+				esc_attr__( 'Rimuovi', 'semantic-ai' )
+			);
+		}
+
+		echo '</ul>';
+
+		echo '<p style="margin-top:12px;display:flex;align-items:center;gap:8px;">';
+		echo '<select id="sai-model-add-select">';
+		echo '<option value="">' . esc_html__( '— scegli modello —', 'semantic-ai' ) . '</option>';
+
+		$providers = [];
+		foreach ( self::MODEL_CATALOG as $model ) {
+			$providers[ $model['provider'] ][] = $model;
+		}
+
+		foreach ( $providers as $provider_name => $provider_models ) {
+			printf( '<optgroup label="%s">', esc_attr( $provider_name ) );
+			foreach ( $provider_models as $model ) {
+				printf(
+					'<option value="%s" data-label="%s" data-provider="%s">%s</option>',
+					esc_attr( $model['id'] ),
+					esc_attr( $model['label'] ),
+					esc_attr( $model['provider'] ),
+					esc_html( $model['label'] . ' (' . $model['id'] . ')' )
+				);
+			}
+			echo '</optgroup>';
+		}
+
+		echo '</select>';
+		printf(
+			'<button type="button" class="button" id="sai-add-model-btn">%s</button>',
+			esc_html__( '+ Aggiungi', 'semantic-ai' )
+		);
+		echo '</p>';
+
+		printf(
+			'<input type="hidden" name="sai_model_preferences" id="sai-model-prefs-hidden" value="%s">',
+			esc_attr( $hidden_value )
+		);
+
+		echo '<p class="description">' . esc_html__(
+			'Il WP AI Client prova i modelli in quest\'ordine e usa il primo supportato dal provider configurato. Aggiungi o rimuovi modelli liberamente.',
+			'semantic-ai'
+		) . '</p>';
+
+		echo '</div>';
+	}
+
+	/** Renderizza lo script JS per la gestione dell'ordinamento modelli. */
+	public function render_model_prefs_script(): void {
+		?>
+		<script>
+		(function () {
+			var list   = document.getElementById('sai-model-list');
+			var hidden = document.getElementById('sai-model-prefs-hidden');
+			var sel    = document.getElementById('sai-model-add-select');
+			var addBtn = document.getElementById('sai-add-model-btn');
+
+			if (!list || !hidden || !sel || !addBtn) { return; }
+
+			function updatePositions() {
+				list.querySelectorAll('.sai-model-item').forEach(function (item, i) {
+					item.querySelector('.sai-pos').textContent = (i + 1) + '.';
+				});
+			}
+
+			function sync() {
+				var ids = [];
+				list.querySelectorAll('.sai-model-item').forEach(function (item) {
+					ids.push(item.dataset.modelId);
+				});
+				hidden.value = JSON.stringify(ids);
+			}
+
+			list.addEventListener('click', function (e) {
+				var btn  = e.target.closest('button');
+				if (!btn) { return; }
+				var item = btn.closest('.sai-model-item');
+				if (!item) { return; }
+
+				if (btn.classList.contains('sai-move-up')) {
+					var prev = item.previousElementSibling;
+					if (prev) { list.insertBefore(item, prev); }
+				} else if (btn.classList.contains('sai-move-down')) {
+					var next = item.nextElementSibling;
+					if (next) { list.insertBefore(next, item); }
+				} else if (btn.classList.contains('sai-remove')) {
+					item.remove();
+				}
+
+				updatePositions();
+				sync();
+			});
+
+			addBtn.addEventListener('click', function () {
+				var opt      = sel.options[sel.selectedIndex];
+				var modelId  = opt.value;
+				if (!modelId) { return; }
+				if (list.querySelector('[data-model-id="' + modelId + '"]')) { return; }
+
+				var label    = opt.dataset.label    || opt.text;
+				var provider = opt.dataset.provider || '';
+				var count    = list.querySelectorAll('.sai-model-item').length;
+
+				var li = document.createElement('li');
+				li.className           = 'sai-model-item';
+				li.dataset.modelId     = modelId;
+				li.dataset.provider    = provider;
+				li.style.cssText       = 'display:flex;align-items:center;gap:8px;padding:6px 10px;background:#fff;border:1px solid #ddd;margin-bottom:4px;border-radius:3px;';
+
+				var pos  = document.createElement('span');
+				pos.className   = 'sai-pos';
+				pos.style.cssText = 'color:#888;min-width:24px;font-weight:600';
+				pos.textContent = (count + 1) + '.';
+
+				var strong = document.createElement('strong');
+				strong.textContent = label;
+
+				var prov = document.createElement('span');
+				prov.style.cssText = 'color:#888;font-size:12px';
+				prov.textContent   = provider ? '(' + provider + ')' : '';
+
+				var code = document.createElement('code');
+				code.style.cssText = 'color:#555;font-size:11px;background:#f6f6f6;padding:1px 4px;border-radius:2px';
+				code.textContent   = modelId;
+
+				var spacer = document.createElement('span');
+				spacer.style.flex = '1';
+
+				var btnUp   = document.createElement('button');
+				btnUp.type  = 'button';
+				btnUp.className = 'button button-small sai-move-up';
+				btnUp.title = '↑ Sposta su';
+				btnUp.innerHTML = '&#9650;';
+
+				var btnDn   = document.createElement('button');
+				btnDn.type  = 'button';
+				btnDn.className = 'button button-small sai-move-down';
+				btnDn.title = '↓ Sposta giù';
+				btnDn.style.marginLeft = '2px';
+				btnDn.innerHTML = '&#9660;';
+
+				var btnRm   = document.createElement('button');
+				btnRm.type  = 'button';
+				btnRm.className = 'button button-small sai-remove';
+				btnRm.title = 'Rimuovi';
+				btnRm.style.cssText = 'margin-left:6px;color:#a00';
+				btnRm.innerHTML = '&#10005;';
+
+				li.appendChild(pos);
+				li.appendChild(strong);
+				li.appendChild(prov);
+				li.appendChild(code);
+				li.appendChild(spacer);
+				li.appendChild(btnUp);
+				li.appendChild(btnDn);
+				li.appendChild(btnRm);
+
+				list.appendChild(li);
+				updatePositions();
+				sync();
+			});
+
+			sync();
+		})();
+		</script>
+		<?php
+	}
+
 	/**
 	 * Sanitizza un intero positivo.
 	 *
@@ -282,5 +556,35 @@ class SettingsPage {
 		}
 
 		return ! empty( $valid ) ? $valid : [ 'post', 'page' ];
+	}
+
+	/**
+	 * Sanitizza le preferenze modelli: decodifica il JSON inviato dal form
+	 * e valida ogni ID contro il catalogo noto.
+	 *
+	 * @param mixed $value Stringa JSON ricevuta dal campo hidden.
+	 * @return string[] Array ordinato di model ID validi.
+	 */
+	public function sanitize_model_preferences( mixed $value ): array {
+		$catalog_ids = array_column( self::MODEL_CATALOG, 'id' );
+
+		if ( ! is_string( $value ) ) {
+			return self::DEFAULT_MODEL_PREFERENCES;
+		}
+
+		$decoded = json_decode( $value, true );
+
+		if ( ! is_array( $decoded ) ) {
+			return self::DEFAULT_MODEL_PREFERENCES;
+		}
+
+		$valid = [];
+		foreach ( $decoded as $model_id ) {
+			if ( is_string( $model_id ) && in_array( $model_id, $catalog_ids, true ) ) {
+				$valid[] = $model_id;
+			}
+		}
+
+		return ! empty( $valid ) ? $valid : self::DEFAULT_MODEL_PREFERENCES;
 	}
 }
