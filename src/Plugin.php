@@ -177,7 +177,7 @@ final class Plugin {
 		}
 		$links[] = sprintf(
 			'<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>',
-			esc_url( 'https://github.com/miziomon/wp-semantic-ai#doc' ),
+			esc_url( 'https://github.com/miziomon/wp-semantic-ai' ),
 			esc_html__( 'GitHub', 'semantic-ai' )
 		);
 		return $links;
@@ -215,10 +215,7 @@ final class Plugin {
 			? array_values( array_map( 'strval', $raw_prefs ) )
 			: [ 'claude-sonnet-4-6', 'gemini-3.5-flash', 'gpt-4.1' ];
 
-		$builder
-			->using_temperature( 0.0 )
-			->using_max_tokens( 10 )
-			->using_model_preference( ...$model_prefs );
+		$builder->using_model_preference( ...$model_prefs );
 
 		$result = $builder->generate_text();
 
