@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace Mavida\SemanticInternalLinks\Settings;
 
 use Mavida\SemanticInternalLinks\Plugin;
+use Mavida\SemanticInternalLinks\Updater;
 
 /**
  * Registra e renderizza la pagina "Impostazioni → Semantic AI".
@@ -36,6 +37,9 @@ class SettingsPage {
 
 	/** Nome della sezione preferenze modelli. */
 	private const SECTION_MODELS = 'sai_section_models';
+
+	/** Nome della sezione aggiornamenti automatici. */
+	private const SECTION_UPDATES = 'sai_section_updates';
 
 	/**
 	 * Catalogo dei modelli AI disponibili per la selezione.
@@ -90,6 +94,13 @@ class SettingsPage {
 			self::MENU_SLUG
 		);
 
+		add_settings_section(
+			self::SECTION_UPDATES,
+			__( 'Aggiornamenti automatici', 'semantic-ai' ),
+			[ $this, 'render_section_updates_description' ],
+			self::MENU_SLUG
+		);
+
 		$this->add_all_fields();
 	}
 
@@ -138,6 +149,7 @@ class SettingsPage {
 			'sai_target_post_types'     => [ $this, 'sanitize_post_types' ],
 			'sai_cache_ttl'             => [ $this, 'sanitize_positive_int' ],
 			'sai_model_preferences'     => [ $this, 'sanitize_model_preferences' ],
+			'sai_update_check_interval' => [ $this, 'sanitize_positive_int' ],
 		];
 
 		foreach ( $options as $option_name => $sanitize_callback ) {
@@ -242,6 +254,22 @@ class SettingsPage {
 			self::MENU_SLUG,
 			self::SECTION_MODELS
 		);
+
+		add_settings_field(
+			'sai_update_check_interval',
+			__( 'Intervallo verifica (ore)', 'semantic-ai' ),
+			[ $this, 'render_update_interval_field' ],
+			self::MENU_SLUG,
+			self::SECTION_UPDATES
+		);
+
+		add_settings_field(
+			'sai_force_update_check',
+			__( 'Forza verifica ora', 'semantic-ai' ),
+			[ $this, 'render_force_check_field' ],
+			self::MENU_SLUG,
+			self::SECTION_UPDATES
+		);
 	}
 
 	/**
@@ -299,6 +327,65 @@ class SettingsPage {
 		if ( '' !== $description ) {
 			printf( '<p class="description">%s</p>', esc_html( $description ) );
 		}
+	}
+
+	/** Renderizza la descrizione della sezione aggiornamenti automatici. */
+	public function render_section_updates_description(): void {
+		echo '<p>' . esc_html__(
+			'Configura con quale frequenza il plugin interroga GitHub per nuovi aggiornamenti.',
+			'semantic-ai'
+		) . '</p>';
+	}
+
+	/** Renderizza il campo dell\'intervallo di verifica aggiornamenti. */
+	public function render_update_interval_field(): void {
+		$value = (int) Plugin::get_option( 'update_check_interval' );
+		$value = max( 1, min( 24, $value ) );
+
+		printf(
+			'<input type="number" name="sai_update_check_interval" id="sai_update_check_interval" value="%s" min="1" max="24" class="small-text" /> %s',
+			esc_attr( (string) $value ),
+			esc_html__( 'ore', 'semantic-ai' )
+		);
+
+		echo '<p class="description">' . esc_html__(
+			'Ogni quante ore il plugin interroga GitHub per nuovi aggiornamenti (1–24). Modificare questa impostazione svuota la cache corrente.',
+			'semantic-ai'
+		) . '</p>';
+	}
+
+	/** Renderizza il pulsante di verifica forzata degli aggiornamenti. */
+	public function render_force_check_field(): void {
+		$nonce_url = wp_nonce_url(
+			admin_url( 'admin-post.php?action=sai_force_update_check' ),
+			'sai_force_update_check'
+		);
+
+		$cached = Updater::get_cached_release();
+		$gh_ver = is_array( $cached ) ? ltrim( (string) ( $cached['tag_name'] ?? '?' ), 'v' ) : null;
+
+		if ( is_null( $gh_ver ) ) {
+			$status = __( 'Cache non presente — verrà interrogata GitHub alla prossima verifica.', 'semantic-ai' );
+		} else {
+			$status = sprintf(
+				/* translators: 1: versione installata, 2: versione in cache da GitHub */
+				__( 'Installata: %1$s · GitHub (in cache): %2$s', 'semantic-ai' ),
+				SAI_VERSION,
+				$gh_ver
+			);
+		}
+
+		printf(
+			'<a href="%s" class="button">%s</a><span class="description" style="margin-left:10px;">%s</span>',
+			esc_url( $nonce_url ),
+			esc_html__( 'Forza verifica aggiornamenti', 'semantic-ai' ),
+			esc_html( $status )
+		);
+
+		echo '<p class="description" style="margin-top:6px;">' . esc_html__(
+			'Svuota la cache GitHub e apre la pagina Aggiornamenti di WordPress con verifica forzata.',
+			'semantic-ai'
+		) . '</p>';
 	}
 
 	/** Renderizza il campo di ordinamento dei modelli AI. */

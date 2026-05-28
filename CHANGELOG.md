@@ -7,6 +7,20 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-05-28
+
+### Added
+
+- Pulsante "Forza verifica aggiornamenti" nella pagina Impostazioni → Semantic AI: cancella il transient GitHub e reindirizza a `update-core.php?force-check=1`, così WP e il plugin interrogano entrambi fonti fresche.
+- Integrazione con "Verifica di nuovo" di WordPress: hook su `wp_clean_plugins_cache` che invalida automaticamente la cache GitHub ogni volta che WP forza un controllo aggiornamenti.
+- Campo "Intervallo verifica (ore)" nelle impostazioni: personalizza ogni quante ore il plugin interroga GitHub (1–24, default 4h). Modificare il valore svuota automaticamente la cache corrente.
+- Stato cache mostrato accanto al pulsante (versione installata vs. versione GitHub in cache).
+
+### Changed
+
+- Intervallo di verifica aggiornamenti ridotto da 12h a 4h (default).
+- La durata della cache è ora dinamica: legge `Plugin::get_option('update_check_interval')` invece di una costante hardcoded.
+
 ## [0.2.3] - 2026-05-28
 
 ### Added
@@ -62,7 +76,8 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Filtri di estensione: `SAI_candidates`, `SAI_system_instruction`, `SAI_suggestion_validate_link`.
 - Tooling: `@wordpress/scripts`, `@wordpress/env`, PHPCS (WPCS), PHPStan livello 8 con stubs WP 7.0.
 
-[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.4...HEAD
+[0.2.4]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.0...v0.2.1

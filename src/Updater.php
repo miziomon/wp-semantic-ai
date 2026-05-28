@@ -19,6 +19,8 @@ namespace Mavida\SemanticInternalLinks;
  * 1. pre_set_site_transient_update_plugins → confronta versione GitHub vs installata.
  * 2. plugins_api → popola il popup "Visualizza dettagli versione".
  * 3. upgrader_process_complete → invalida la cache dopo ogni aggiornamento.
+ * 4. wp_clean_plugins_cache → invalida la cache quando WP forza la verifica.
+ * 5. admin_post_sai_force_update_check → gestisce il pulsante nella pagina impostazioni.
  */
 class Updater {
 
@@ -27,9 +29,6 @@ class Updater {
 
 	/** Chiave del transient di cache per la risposta GitHub API. */
 	private const CACHE_KEY = 'sai_github_release';
-
-	/** TTL della cache in secondi (12 ore). */
-	private const CACHE_DURATION = 12 * HOUR_IN_SECONDS;
 
 	/**
 	 * Basename del plugin (es. wp-semantic-ai/semantic-ai.php).
@@ -56,6 +55,12 @@ class Updater {
 		add_filter( 'pre_set_site_transient_update_plugins', [ $this, 'check_for_update' ] );
 		add_filter( 'plugins_api', [ $this, 'plugin_info' ], 10, 3 );
 		add_action( 'upgrader_process_complete', [ $this, 'purge_cache' ], 10, 2 );
+		// Invalida il transient GitHub quando WP forza un controllo aggiornamenti.
+		add_action( 'wp_clean_plugins_cache', [ $this, 'purge_cache_on_force_check' ] );
+		// Gestisce il pulsante "Forza verifica" dalla pagina impostazioni.
+		add_action( 'admin_post_sai_force_update_check', [ $this, 'handle_force_update_check' ] );
+		// Invalida la cache quando l'utente cambia l'intervallo di verifica.
+		add_action( 'update_option_sai_update_check_interval', [ $this, 'purge_cache_on_force_check' ] );
 	}
 
 	/**
@@ -165,6 +170,42 @@ class Updater {
 	}
 
 	/**
+	 * Svuota la cache GitHub quando WordPress forza un controllo aggiornamenti
+	 * (es. "Verifica di nuovo" o update-core.php?force-check=1).
+	 */
+	public function purge_cache_on_force_check(): void {
+		delete_transient( self::CACHE_KEY );
+	}
+
+	/**
+	 * Gestisce il pulsante "Forza verifica aggiornamenti" nella pagina impostazioni.
+	 * Cancella il transient GitHub e reindirizza a update-core.php?force-check=1.
+	 */
+	public function handle_force_update_check(): void {
+		check_admin_referer( 'sai_force_update_check' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Non autorizzato.', 'semantic-ai' ) );
+		}
+
+		delete_transient( self::CACHE_KEY );
+
+		wp_safe_redirect( admin_url( 'update-core.php?force-check=1' ) );
+		exit;
+	}
+
+	/**
+	 * Restituisce i dati del release GitHub attualmente in cache.
+	 * Usato dalla pagina impostazioni per mostrare lo stato della cache.
+	 *
+	 * @return array<string, mixed>|null Dati del release in cache, o null se assenti.
+	 */
+	public static function get_cached_release(): ?array {
+		$cached = get_transient( self::CACHE_KEY );
+		return is_array( $cached ) ? $cached : null;
+	}
+
+	/**
 	 * Recupera i dati dell'ultimo release GitHub.
 	 * Usa un transient come cache per evitare chiamate API eccessive.
 	 *
@@ -202,8 +243,18 @@ class Updater {
 			return null;
 		}
 
-		set_transient( self::CACHE_KEY, $data, self::CACHE_DURATION );
+		set_transient( self::CACHE_KEY, $data, $this->get_cache_duration() );
 
 		return $data;
+	}
+
+	/**
+	 * Calcola la durata della cache in secondi leggendo l'opzione configurata.
+	 *
+	 * @return int Durata in secondi (tra 1h e 24h).
+	 */
+	private function get_cache_duration(): int {
+		$hours = (int) Plugin::get_option( 'update_check_interval' );
+		return max( 1, min( 24, $hours ) ) * HOUR_IN_SECONDS;
 	}
 }
