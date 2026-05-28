@@ -7,6 +7,15 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.7] - 2026-05-28
+
+### Fixed
+
+- **Aggiornamenti automatici non rilevati**: tre bug distinti risolti.
+  1. *Nessuna GitHub Release* (causa principale): il plugin interrogava `/releases/latest` che richiedeva Release create esplicitamente su GitHub, non semplici tag `git push`. Create le release v0.2.2–v0.2.6 mancanti.
+  2. *Cache non svuotata al force-check*: `update-core.php?force-check=1` chiama `delete_site_transient('update_plugins')`, non `wp_clean_plugins_cache()`. Aggiunto hook su `delete_site_transient_update_plugins` per coprire tutti i percorsi di verifica forzata.
+  3. *Directory zip GitHub rinominata male*: GitHub produce zip con root `{owner}-{repo}-{hash}/`; WordPress si aspetta `wp-semantic-ai/`. Aggiunto filtro `upgrader_source_selection` che rinomina la directory estratta prima dell'installazione.
+
 ## [0.2.6] - 2026-05-28
 
 ### Changed
@@ -92,7 +101,8 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Filtri di estensione: `SAI_candidates`, `SAI_system_instruction`, `SAI_suggestion_validate_link`.
 - Tooling: `@wordpress/scripts`, `@wordpress/env`, PHPCS (WPCS), PHPStan livello 8 con stubs WP 7.0.
 
-[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.6...HEAD
+[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.7...HEAD
+[0.2.7]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.6...v0.2.7
 [0.2.6]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.3...v0.2.4

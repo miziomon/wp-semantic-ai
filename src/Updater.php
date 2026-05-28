@@ -18,9 +18,11 @@ namespace Mavida\SemanticInternalLinks;
  * Flusso:
  * 1. pre_set_site_transient_update_plugins → confronta versione GitHub vs installata.
  * 2. plugins_api → popola il popup "Visualizza dettagli versione".
- * 3. upgrader_process_complete → invalida la cache dopo ogni aggiornamento.
- * 4. wp_clean_plugins_cache → invalida la cache quando WP forza la verifica.
- * 5. admin_post_sai_force_update_check → gestisce il pulsante nella pagina impostazioni.
+ * 3. upgrader_process_complete → invalida cache dopo aggiornamento completato.
+ * 4. wp_clean_plugins_cache + delete_site_transient_update_plugins → invalida
+ *    cache quando WP forza un controllo (copertura di tutti i percorsi WP).
+ * 5. upgrader_source_selection → rinomina la directory estratta dallo zip GitHub
+ *    ({owner}-{repo}-{hash}) nel nome corretto del plugin ({slug}).
  */
 class Updater {
 
@@ -55,19 +57,26 @@ class Updater {
 		add_filter( 'pre_set_site_transient_update_plugins', [ $this, 'check_for_update' ] );
 		add_filter( 'plugins_api', [ $this, 'plugin_info' ], 10, 3 );
 		add_action( 'upgrader_process_complete', [ $this, 'purge_cache' ], 10, 2 );
-		// Invalida il transient GitHub quando WP forza un controllo aggiornamenti.
+
+		// Invalida il transient GitHub in tutti i percorsi di force-check WP:
+		// - wp_clean_plugins_cache → scatta da alcuni contesti admin
+		// - delete_site_transient_update_plugins → scatta sempre quando WP
+		//   elimina il transient update_plugins (es. update-core.php?force-check=1)
 		add_action( 'wp_clean_plugins_cache', [ $this, 'purge_cache_on_force_check' ] );
-		// Gestisce il pulsante "Forza verifica" dalla pagina impostazioni.
-		add_action( 'admin_post_sai_force_update_check', [ $this, 'handle_force_update_check' ] );
+		add_action( 'delete_site_transient_update_plugins', [ $this, 'purge_cache_on_force_check' ] );
+
 		// Invalida la cache quando l'utente cambia l'intervallo di verifica.
 		add_action( 'update_option_sai_update_check_interval', [ $this, 'purge_cache_on_force_check' ] );
+
+		// Gestisce il pulsante "Forza verifica" dalla pagina impostazioni.
+		add_action( 'admin_post_sai_force_update_check', [ $this, 'handle_force_update_check' ] );
+
+		// Rinomina la directory estratta dallo zip GitHub nel nome corretto del plugin.
+		add_filter( 'upgrader_source_selection', [ $this, 'fix_source_dir' ], 10, 4 );
 	}
 
 	/**
 	 * Inietta i dati di aggiornamento nel transient nativo di WordPress.
-	 *
-	 * WordPress passa un \stdClass per questo filtro: usare stdClass come tipo
-	 * permette a PHPStan di accettare le proprietà dinamiche (response, no_update).
 	 *
 	 * @param \stdClass $transient Transient corrente degli aggiornamenti.
 	 * @return \stdClass Transient (eventualmente modificato).
@@ -170,8 +179,10 @@ class Updater {
 	}
 
 	/**
-	 * Svuota la cache GitHub quando WordPress forza un controllo aggiornamenti
-	 * (es. "Verifica di nuovo" o update-core.php?force-check=1).
+	 * Svuota la cache GitHub in tutti i contesti di force-check WordPress:
+	 * - wp_clean_plugins_cache
+	 * - delete_site_transient_update_plugins (update-core.php?force-check=1)
+	 * - update_option_sai_update_check_interval
 	 */
 	public function purge_cache_on_force_check(): void {
 		delete_transient( self::CACHE_KEY );
@@ -192,6 +203,55 @@ class Updater {
 
 		wp_safe_redirect( admin_url( 'update-core.php?force-check=1' ) );
 		exit;
+	}
+
+	/**
+	 * Rinomina la directory estratta dallo zip GitHub prima dell'installazione.
+	 *
+	 * GitHub produce zip con root "{owner}-{repo}-{hash}/" ma WordPress si aspetta
+	 * che la directory corrisponda allo slug del plugin ("{slug}/").
+	 *
+	 * @param string               $source        Directory sorgente estratta (con trailing slash).
+	 * @param string               $remote_source Directory temporanea di lavoro.
+	 * @param \WP_Upgrader         $upgrader      Istanza upgrader corrente.
+	 * @param array<string, mixed> $hook_extra    Metadati dell'operazione (plugin, action, type).
+	 * @return string|\WP_Error    Directory corretta o WP_Error in caso di rinomina fallita.
+	 */
+	public function fix_source_dir(
+		string $source,
+		string $remote_source,
+		\WP_Upgrader $upgrader,
+		array $hook_extra
+	): string|\WP_Error {
+		if ( ( $hook_extra['plugin'] ?? '' ) !== $this->basename ) {
+			return $source;
+		}
+
+		global $wp_filesystem;
+
+		if ( ! $wp_filesystem instanceof \WP_Filesystem_Base ) {
+			return $source;
+		}
+
+		$correct = trailingslashit( dirname( untrailingslashit( $source ) ) . '/' . $this->slug );
+
+		if ( $source === $correct ) {
+			return $source;
+		}
+
+		if ( $wp_filesystem->move( untrailingslashit( $source ), untrailingslashit( $correct ) ) ) {
+			return $correct;
+		}
+
+		return new \WP_Error(
+			'sai_rename_failed',
+			sprintf(
+				/* translators: 1: directory origine, 2: directory destinazione */
+				__( 'Impossibile rinominare %1$s in %2$s durante l\'aggiornamento.', 'semantic-ai' ),
+				untrailingslashit( $source ),
+				untrailingslashit( $correct )
+			)
+		);
 	}
 
 	/**
