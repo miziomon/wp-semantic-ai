@@ -7,6 +7,14 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-05-28
+
+### Fixed
+
+- Aggiunto `build/index.js` al repository: il bundle JS mancava dallo ZIP GitHub, impedendo il caricamento della sidebar nell'editor.
+- Corretta la dipendenze dell'asset PHP (`build/index.asset.php`): le dipendenze WordPress (`wp-plugins`, `wp-components`, ecc.) ora vengono dichiarate correttamente.
+- Correcto percorso CSS in `Plugin.php`: `build/index.css` → `build/editor.scss.css`.
+
 ## [0.2.0] - 2026-05-28
 
 ### Changed
@@ -36,6 +44,7 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Filtri di estensione: `SAI_candidates`, `SAI_system_instruction`, `SAI_suggestion_validate_link`.
 - Tooling: `@wordpress/scripts`, `@wordpress/env`, PHPCS (WPCS), PHPStan livello 8 con stubs WP 7.0.
 
-[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/miziomon/wp-semantic-ai/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/miziomon/wp-semantic-ai/releases/tag/v0.1.0

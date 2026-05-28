@@ -4,7 +4,11 @@
 
 # Build JS/CSS (generato da npm run build)
 /build/
+!/build/index.js
 !/build/index.asset.php
+!/build/editor.scss.css
+!/build/editor.scss-rtl.css
+!/build/editor.scss.asset.php
 
 # wp-env
 /.wp-env/

@@ -113,7 +113,7 @@ final class Plugin {
 
 		wp_enqueue_style(
 			'semantic-ai-editor',
-			SAI_PLUGIN_URL . 'build/index.css',
+			SAI_PLUGIN_URL . 'build/editor.scss.css',
 			[],
 			$asset['version']
 		);
