@@ -12,7 +12,7 @@ composer phpcbf           # auto-fix PHPCS violations
 composer phpstan          # analisi statica livello 8
 ```
 
-> **Nota:** il plugin usa un autoloader PSR-4 nativo (`spl_autoload_register` in `semantic-internal-links.php`). `vendor/` non è necessario in produzione — lo zip di GitHub funziona senza `composer install`.
+> **Nota:** il plugin usa un autoloader PSR-4 nativo (`spl_autoload_register` in `semantic-ai.php`). `vendor/` non è necessario in produzione — lo zip di GitHub funziona senza `composer install`.
 
 ### JavaScript / CSS
 ```bash
@@ -48,7 +48,7 @@ node_modules\.bin\wp-env run cli wp plugin install ai-provider-for-anthropic --a
 ```
 [Sidebar Gutenberg] → clic "Analizza"
     → src/editor/lib/blocks.js   (raccoglie blocchi testuali dall'editor)
-    → src/editor/lib/api.js      (POST /semantic-internal-links/v1/suggest via apiFetch)
+    → src/editor/lib/api.js      (POST /semantic-ai/v1/suggest via apiFetch)
         → src/Rest/SuggestController.php   (authn: edit_post + nonce REST)
             → src/Content/CandidateProvider.php  (WP_Query: tax + fulltext)
             → src/Ai/LinkSuggester.php           (wp_ai_client_prompt, cache, chunking)
@@ -62,12 +62,12 @@ node_modules\.bin\wp-env run cli wp plugin install ai-provider-for-anthropic --a
 ### PHP (`src/`)
 
 - **`Plugin.php`** — singleton, registra tutti gli hook WP; DI chain manuale in `register_rest_routes()`; `Plugin::get_option($key)` restituisce le impostazioni con default centralizzati.
-- **`Rest/SuggestController`** — endpoint `POST /semantic-internal-links/v1/suggest`; `permission_callback` = `current_user_can('edit_post', $post_id)`.
+- **`Rest/SuggestController`** — endpoint `POST /semantic-ai/v1/suggest`; `permission_callback` = `current_user_can('edit_post', $post_id)`.
 - **`Ai/LinkSuggester`** — orchestratore: controlla disponibilità provider, gestisce cache, attiva chunking se `strlen(content) > chunk_threshold_chars`, chiama `call_ai()` N volte e unisce i risultati con deduplicazione.
 - **`Ai/PromptBuilder`** — costruisce il system instruction e il payload JSON; `get_json_schema()` è il contratto con il modello AI (non modificarlo senza aggiornare `ResponseValidator`).
 - **`Ai/ResponseValidator`** — unica guardia di sicurezza tra output AI e dati scritti nel post: scarta suggerimenti con `targetId` non presente nei candidati originali (gli URL vengono **sempre** risolti dalla lista interna, mai dal testo libero del modello).
-- **`Content/CandidateProvider`** — due query `WP_Query`: prima per tassonomie condivise, poi fulltext (`s=`) se i risultati sono sotto soglia; emette filtro `sil_candidates`.
-- **`Settings/SettingsPage`** — Settings API sotto *Impostazioni → Semantic Internal Links*; le opzioni si leggono sempre tramite `Plugin::get_option()`.
+- **`Content/CandidateProvider`** — due query `WP_Query`: prima per tassonomie condivise, poi fulltext (`s=`) se i risultati sono sotto soglia; emette filtro `sai_candidates`.
+- **`Settings/SettingsPage`** — Settings API sotto *Impostazioni → Semantic AI*; le opzioni si leggono sempre tramite `Plugin::get_option()`.
 
 ### JavaScript (`src/editor/`)
 
@@ -84,12 +84,12 @@ Il plugin non inserisce mai testo generato dall'AI. Applica solo formati (`core/
 ### PHP
 - PSR-4: namespace `Mavida\SemanticInternalLinks\`, file PascalCase (es. `LinkSuggester.php`).
 - `declare(strict_types=1)` in ogni file PHP.
-- PHPCS scansiona solo `src/` e `semantic-internal-links.php`; esclude `src/editor/` e `assets/` (gestiti da wp-scripts).
+- PHPCS scansiona solo `src/` e `semantic-ai.php`; esclude `src/editor/` e `assets/` (gestiti da wp-scripts).
 - Le annotazioni `/* @var Type $x */` per PHPStan vengono segnalate come falso positivo da `Squiz.PHP.CommentedOutCode` — la sniff è disabilitata nel ruleset.
 - Non usare l'operatore Elvis `?:` (PHPCS lo segnala): usare ternario esplicito.
 
 ### PHPStan
-- `phpstan-bootstrap.php` definisce le costanti `SIL_*` e lo stub di `WP_AI_Client_Prompt_Builder` / `wp_ai_client_prompt()` perché `php-stubs/wordpress-stubs` è ancora alla v6.9.x e non include le API WP 7.0.
+- `phpstan-bootstrap.php` definisce le costanti `SAI_*` e lo stub di `WP_AI_Client_Prompt_Builder` / `wp_ai_client_prompt()` perché `php-stubs/wordpress-stubs` è ancora alla v6.9.x e non include le API WP 7.0.
 - Su Windows, i path in `phpstan-bootstrap.php` usano `str_replace('\\', '/', __DIR__)` per evitare problemi con i separatori.
 
 ### JavaScript
@@ -99,7 +99,7 @@ Il plugin non inserisce mai testo generato dall'AI. Applica solo formati (`core/
 
 ## Impostazioni plugin
 
-Lette via `Plugin::get_option($key)`. Chiavi disponibili (prefisso DB: `sil_`):
+Lette via `Plugin::get_option($key)`. Chiavi disponibili (prefisso DB: `SAI_`):
 
 | Chiave | Default | Descrizione |
 |---|---|---|

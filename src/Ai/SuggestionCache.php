@@ -19,7 +19,7 @@ use Mavida\SemanticInternalLinks\Plugin;
  * di questi elementi, senza bisogno di svuotare la cache manualmente.
  *
  * Invalidazione esplicita: alla chiamata di save_post sul post analizzato
- * (vedi Plugin::boot() → hook sil_invalidate_cache_on_save).
+ * (vedi Plugin::boot() → hook sai_invalidate_cache_on_save).
  */
 class SuggestionCache {
 
@@ -30,7 +30,7 @@ class SuggestionCache {
 	private const SCHEMA_VERSION = '1';
 
 	/** Prefisso del transient per evitare collisioni con altri plugin. */
-	private const TRANSIENT_PREFIX = 'sil_sugg_';
+	private const TRANSIENT_PREFIX = 'sai_sugg_';
 
 	/**
 	 * Recupera una risposta dalla cache.
@@ -73,7 +73,7 @@ class SuggestionCache {
 	 * @param int $post_id ID del post.
 	 */
 	public function invalidate_for_post( int $post_id ): void {
-		$index_key = 'sil_cache_index_' . $post_id;
+		$index_key = 'sai_cache_index_' . $post_id;
 
 		$raw_keys = get_option( $index_key, [] );
 		$keys     = is_array( $raw_keys ) ? $raw_keys : [];
@@ -119,7 +119,7 @@ class SuggestionCache {
 	 * @param string $key     Chiave transient da registrare.
 	 */
 	private function register_key( int $post_id, string $key ): void {
-		$index_key = 'sil_cache_index_' . $post_id;
+		$index_key = 'sai_cache_index_' . $post_id;
 
 		$raw_keys = get_option( $index_key, [] );
 		$keys     = is_array( $raw_keys ) ? $raw_keys : [];

@@ -1,4 +1,4 @@
-# Build Brief per Claude Code — Plugin WordPress 7.0 "Semantic Internal Links"
+# Build Brief per Claude Code — Plugin WordPress 7.0 "Semantic AI"
 
 > Questo file è un **prompt operativo** da incollare in Claude Code. Contiene contesto,
 > vincoli, architettura e fasi di lavoro. Lavora **a fasi**, con commit atomici, e a fine
@@ -66,7 +66,7 @@ puntino sempre a contenuti realmente esistenti sul sito.
 | Strategia link interni | **Ibrida**: il plugin fornisce i candidati, l'AI fa il matching |
 | Applicazione modifiche | **Anteprima in modale → applico solo i suggerimenti selezionati** |
 | Ambito contenuti destinazione | **Articoli + Pagine** (`post`, `page`), configurabile in seguito |
-| Nome / text domain | `Semantic Internal Links` / `semantic-internal-links` |
+| Nome / text domain | `Semantic AI` / `semantic-ai` |
 | Namespace PHP (PSR-4 → `src/`) | `Mavida\SemanticInternalLinks` |
 | Provider AI di test | **AI Provider for Anthropic**, preferenza modello `claude-sonnet-4-6` (logica resta provider-agnostica) |
 
@@ -126,7 +126,7 @@ Note operative:
    │  click "Analizza link interni"
    ▼
 [JS] raccoglie i blocchi testuali (plain text + clientId + index) del post
-   │  POST  /wp-json/semantic-internal-links/v1/suggest   (nonce X-WP-Nonce, postId)
+   │  POST  /wp-json/semantic-ai/v1/suggest   (nonce X-WP-Nonce, postId)
    ▼
 [REST controller PHP]  permission_callback: current_user_can('edit_post', $post_id)
    │  1) CandidateProvider → WP_Query post+page (esclude il post corrente, pre-filtro per
@@ -249,8 +249,8 @@ candidati `{ id, title, url, excerpt }`. Usa `using_temperature(0.2)` per output
 ## 8. Struttura del progetto (consigliata)
 
 ```
-semantic-internal-links/
-├── semantic-internal-links.php     # header plugin, guclausola PHP 8.1, autoload, bootstrap
+semantic-ai/
+├── semantic-ai.php     # header plugin, guclausola PHP 8.1, autoload, bootstrap
 ├── composer.json                   # PSR-4 + dev deps (phpcs/wpcs/phpstan)
 ├── package.json                    # @wordpress/scripts, @wordpress/env, deps editor
 ├── .wp-env.json                    # WP 7.0, PHP 8.1, provider Anthropic
@@ -272,7 +272,7 @@ semantic-internal-links/
 │   ├── lib/api.js                  # apiFetch verso l'endpoint REST
 │   └── lib/apply.js                # rich-text applyFormat + updateBlockAttributes
 ├── assets/scss/
-│   └── editor.scss                 # stili BEM (.sil-modal, .sil-modal__row, ...)
+│   └── editor.scss                 # stili BEM (.sai-modal, .sai-modal__row, ...)
 └── build/                          # generato da wp-scripts (gitignored)
 ```
 
@@ -302,7 +302,7 @@ Registra gli script con il file `*.asset.php` generato (deps + version) e accoda
 - Script: `"phpcs"`, `"phpcbf"`, `"phpstan"`.
 
 **PHPCS (`phpcs.xml.dist`)**: ruleset `WordPress`, `config testVersion 8.1-`, definisci
-`text_domain` = `semantic-internal-links` e il `prefix` per le funzioni globali; escludi
+`text_domain` = `semantic-ai` e il `prefix` per le funzioni globali; escludi
 `vendor/`, `node_modules/`, `build/`.
 
 **PHPStan (`phpstan.neon.dist`)**: includi `szepeviktor/phpstan-wordpress`, parti da
@@ -310,8 +310,8 @@ Registra gli script con il file `*.asset.php` generato (deps + version) e accoda
 costanti/funzioni WP. Aggiungi una baseline solo se strettamente necessario, documentandolo.
 
 **`@wordpress/scripts`**: usa `wp-scripts build` / `wp-scripts start`; gestisce JSX e SCSS.
-SCSS in **BEM** (blocco `sil-modal`, elementi `sil-modal__row`, `sil-modal__rationale`,
-modificatori `sil-modal__row--applied`).
+SCSS in **BEM** (blocco `sai-modal`, elementi `sai-modal__row`, `sai-modal__rationale`,
+modificatori `sai-modal__row--applied`).
 
 **`.wp-env.json`**:
 

@@ -1,4 +1,4 @@
-# Semantic Internal Links
+# Semantic AI
 
 Plugin WordPress che analizza semanticamente un articolo nell'editor Gutenberg e propone, tramite **WP AI Client** nativo (WordPress 7.0), una topologia di link interni e un'enfasi semantica (grassetto/corsivo) su keyword e frasi chiave.
 
@@ -58,12 +58,12 @@ build/                # Asset compilati (generato da npm run build)
 Genera il file `.pot` per le traduzioni:
 
 ```bash
-wp i18n make-pot . languages/semantic-internal-links.pot --domain=semantic-internal-links
+wp i18n make-pot . languages/semantic-ai.pot --domain=semantic-ai
 ```
 
 ## Impostazioni
 
-Disponibili in **Impostazioni → Semantic Internal Links**:
+Disponibili in **Impostazioni → Semantic AI**:
 
 | Parametro | Default | Descrizione |
 |---|---|---|

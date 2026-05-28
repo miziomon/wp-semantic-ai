@@ -10,12 +10,12 @@
 
 declare( strict_types=1 );
 
-// Costanti del plugin (definite in semantic-internal-links.php a runtime).
-define( 'SIL_VERSION', '0.1.0' );
-define( 'SIL_PLUGIN_FILE', __DIR__ . '/semantic-internal-links.php' );
+// Costanti del plugin (definite in semantic-ai.php a runtime).
+define( 'SAI_VERSION', '0.1.0' );
+define( 'SAI_PLUGIN_FILE', __DIR__ . '/semantic-ai.php' );
 // Usa solo slash forward per evitare problemi di separatori su Windows con PHPStan.
-define( 'SIL_PLUGIN_DIR', str_replace( '\\', '/', __DIR__ ) . '/' );
-define( 'SIL_PLUGIN_URL', 'http://localhost/' );
+define( 'SAI_PLUGIN_DIR', str_replace( '\\', '/', __DIR__ ) . '/' );
+define( 'SAI_PLUGIN_URL', 'http://localhost/' );
 
 /**
  * Stub del WP AI Client (WordPress 7.0).

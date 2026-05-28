@@ -18,14 +18,14 @@ export default function SuggestionRow( { item, checked, onChange, type } ) {
 			: `"${ item.phrase }" (${ item.format })`;
 
 	return (
-		<div className={ `sil-modal__row${ checked ? ' sil-modal__row--selected' : '' }` }>
+		<div className={ `sai-modal__row${ checked ? ' sai-modal__row--selected' : '' }` }>
 			<CheckboxControl
 				label={ label }
 				checked={ checked }
 				onChange={ onChange }
 			/>
 			{ item.rationale && (
-				<p className="sil-modal__rationale">{ item.rationale }</p>
+				<p className="sai-modal__rationale">{ item.rationale }</p>
 			) }
 		</div>
 	);

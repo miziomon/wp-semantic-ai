@@ -6,7 +6,7 @@ import { registerPlugin } from '@wordpress/plugins';
 import Sidebar from './components/Sidebar';
 
 registerPlugin(
-	'semantic-internal-links',
+	'semantic-ai',
 	{
 		render: Sidebar,
 	}

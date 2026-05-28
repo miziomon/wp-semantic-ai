@@ -11,7 +11,7 @@ namespace Mavida\SemanticInternalLinks;
 
 /**
  * Plugin entry-point. Usa il pattern singleton leggero: una sola istanza
- * viene creata da semantic-internal-links.php tramite instance()->boot().
+ * viene creata da semantic-ai.php tramite instance()->boot().
  */
 final class Plugin {
 
@@ -65,9 +65,9 @@ final class Plugin {
 	/** Carica le traduzioni del plugin. */
 	public function load_text_domain(): void {
 		load_plugin_textdomain(
-			'semantic-internal-links',
+			'semantic-ai',
 			false,
-			dirname( plugin_basename( SIL_PLUGIN_FILE ) ) . '/languages'
+			dirname( plugin_basename( SAI_PLUGIN_FILE ) ) . '/languages'
 		);
 	}
 
@@ -76,7 +76,7 @@ final class Plugin {
 	 * Legge deps e version da build/index.asset.php generato da @wordpress/scripts.
 	 */
 	public function enqueue_editor_assets(): void {
-		$asset_file = SIL_PLUGIN_DIR . 'build/index.asset.php';
+		$asset_file = SAI_PLUGIN_DIR . 'build/index.asset.php';
 
 		// Il file asset viene generato da "npm run build": non disponibile in sviluppo
 		// finché non si esegue almeno una build.
@@ -88,32 +88,32 @@ final class Plugin {
 		$asset = require $asset_file; // phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
 
 		wp_enqueue_script(
-			'semantic-internal-links-editor',
-			SIL_PLUGIN_URL . 'build/index.js',
+			'semantic-ai-editor',
+			SAI_PLUGIN_URL . 'build/index.js',
 			$asset['dependencies'],
 			$asset['version'],
 			false
 		);
 
 		wp_set_script_translations(
-			'semantic-internal-links-editor',
-			'semantic-internal-links',
-			SIL_PLUGIN_DIR . 'languages'
+			'semantic-ai-editor',
+			'semantic-ai',
+			SAI_PLUGIN_DIR . 'languages'
 		);
 
 		// Passa al JS i dati di bootstrap (flag provider, nonce REST).
 		wp_localize_script(
-			'semantic-internal-links-editor',
+			'semantic-ai-editor',
 			'silData',
 			[
-				'restUrl' => esc_url_raw( rest_url( 'semantic-internal-links/v1' ) ),
+				'restUrl' => esc_url_raw( rest_url( 'semantic-ai/v1' ) ),
 				'nonce'   => wp_create_nonce( 'wp_rest' ),
 			]
 		);
 
 		wp_enqueue_style(
-			'semantic-internal-links-editor',
-			SIL_PLUGIN_URL . 'build/index.css',
+			'semantic-ai-editor',
+			SAI_PLUGIN_URL . 'build/index.css',
 			[],
 			$asset['version']
 		);
@@ -157,7 +157,7 @@ final class Plugin {
 			'cache_ttl'             => DAY_IN_SECONDS,
 		];
 
-		$value = get_option( 'sil_' . $key, $defaults[ $key ] ?? null );
+		$value = get_option( 'sai_' . $key, $defaults[ $key ] ?? null );
 
 		return $value;
 	}

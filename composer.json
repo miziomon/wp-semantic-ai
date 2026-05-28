@@ -1,6 +1,6 @@
 {
-    "name": "mavida/semantic-internal-links",
-    "description": "WordPress plugin: AI-powered semantic internal links for Gutenberg.",
+    "name": "mavida/semantic-ai",
+    "description": "WordPress plugin: AI-powered Semantic AI for Gutenberg.",
     "type": "wordpress-plugin",
     "license": "proprietary",
     "require": {

@@ -10,7 +10,7 @@ declare( strict_types=1 );
 namespace Mavida\SemanticInternalLinks\Settings;
 
 /**
- * Registra e renderizza la pagina "Impostazioni → Semantic Internal Links".
+ * Registra e renderizza la pagina "Impostazioni → Semantic AI".
  *
  * Parametri configurabili:
  * - max_candidates: numero massimo di post/page inviati come candidati all'AI.
@@ -23,19 +23,19 @@ namespace Mavida\SemanticInternalLinks\Settings;
 class SettingsPage {
 
 	/** Slug della pagina di impostazioni. */
-	public const MENU_SLUG = 'semantic-internal-links';
+	public const MENU_SLUG = 'semantic-ai';
 
 	/** Gruppo di opzioni per register_setting. */
-	public const OPTION_GROUP = 'sil_options';
+	public const OPTION_GROUP = 'sai_options';
 
 	/** Nome della sezione principale. */
-	private const SECTION_MAIN = 'sil_section_main';
+	private const SECTION_MAIN = 'sai_section_main';
 
 	/** Registra la voce di menu e la pagina impostazioni. */
 	public function register(): void {
 		add_options_page(
-			__( 'Semantic Internal Links', 'semantic-internal-links' ),
-			__( 'Semantic Internal Links', 'semantic-internal-links' ),
+			__( 'Semantic AI', 'semantic-ai' ),
+			__( 'Semantic AI', 'semantic-ai' ),
 			'manage_options',
 			self::MENU_SLUG,
 			[ $this, 'render_page' ]
@@ -50,7 +50,7 @@ class SettingsPage {
 
 		add_settings_section(
 			self::SECTION_MAIN,
-			__( 'Parametri di analisi', 'semantic-internal-links' ),
+			__( 'Parametri di analisi', 'semantic-ai' ),
 			[ $this, 'render_section_description' ],
 			self::MENU_SLUG
 		);
@@ -70,7 +70,7 @@ class SettingsPage {
 				<?php
 				settings_fields( self::OPTION_GROUP );
 				do_settings_sections( self::MENU_SLUG );
-				submit_button( __( 'Salva impostazioni', 'semantic-internal-links' ) );
+				submit_button( __( 'Salva impostazioni', 'semantic-ai' ) );
 				?>
 			</form>
 		</div>
@@ -81,19 +81,19 @@ class SettingsPage {
 	public function render_section_description(): void {
 		echo '<p>' . esc_html__(
 			'Configura il comportamento del plugin per la generazione di suggerimenti AI.',
-			'semantic-internal-links'
+			'semantic-ai'
 		) . '</p>';
 	}
 
 	/** Registra tutte le opzioni del plugin con i relativi sanitize callback. */
 	private function register_all_settings(): void {
 		$options = [
-			'sil_max_candidates'        => [ $this, 'sanitize_positive_int' ],
-			'sil_max_links'             => [ $this, 'sanitize_positive_int' ],
-			'sil_max_emphasis'          => [ $this, 'sanitize_positive_int' ],
-			'sil_chunk_threshold_chars' => [ $this, 'sanitize_positive_int' ],
-			'sil_target_post_types'     => [ $this, 'sanitize_post_types' ],
-			'sil_cache_ttl'             => [ $this, 'sanitize_positive_int' ],
+			'sai_max_candidates'        => [ $this, 'sanitize_positive_int' ],
+			'sai_max_links'             => [ $this, 'sanitize_positive_int' ],
+			'sai_max_emphasis'          => [ $this, 'sanitize_positive_int' ],
+			'sai_chunk_threshold_chars' => [ $this, 'sanitize_positive_int' ],
+			'sai_target_post_types'     => [ $this, 'sanitize_post_types' ],
+			'sai_cache_ttl'             => [ $this, 'sanitize_positive_int' ],
 		];
 
 		foreach ( $options as $option_name => $sanitize_callback ) {
@@ -109,73 +109,73 @@ class SettingsPage {
 	private function add_all_fields(): void {
 		$fields = [
 			[
-				'id'       => 'sil_max_candidates',
-				'label'    => __( 'Max candidati', 'semantic-internal-links' ),
+				'id'       => 'sai_max_candidates',
+				'label'    => __( 'Max candidati', 'semantic-ai' ),
 				'callback' => 'render_number_field',
 				'args'     => [
-					'option'      => 'sil_max_candidates',
+					'option'      => 'sai_max_candidates',
 					'default'     => 50,
 					'min'         => 5,
 					'max'         => 200,
-					'description' => __( 'Post/page inviati come candidati all\'AI (5–200).', 'semantic-internal-links' ),
+					'description' => __( 'Post/page inviati come candidati all\'AI (5–200).', 'semantic-ai' ),
 				],
 			],
 			[
-				'id'       => 'sil_max_links',
-				'label'    => __( 'Max link suggeriti', 'semantic-internal-links' ),
+				'id'       => 'sai_max_links',
+				'label'    => __( 'Max link suggeriti', 'semantic-ai' ),
 				'callback' => 'render_number_field',
 				'args'     => [
-					'option'      => 'sil_max_links',
+					'option'      => 'sai_max_links',
 					'default'     => 8,
 					'min'         => 1,
 					'max'         => 30,
-					'description' => __( 'Numero massimo di suggerimenti link per analisi (1–30).', 'semantic-internal-links' ),
+					'description' => __( 'Numero massimo di suggerimenti link per analisi (1–30).', 'semantic-ai' ),
 				],
 			],
 			[
-				'id'       => 'sil_max_emphasis',
-				'label'    => __( 'Max enfasi suggerite', 'semantic-internal-links' ),
+				'id'       => 'sai_max_emphasis',
+				'label'    => __( 'Max enfasi suggerite', 'semantic-ai' ),
 				'callback' => 'render_number_field',
 				'args'     => [
-					'option'      => 'sil_max_emphasis',
+					'option'      => 'sai_max_emphasis',
 					'default'     => 10,
 					'min'         => 0,
 					'max'         => 30,
-					'description' => __( 'Numero massimo di grassetto/corsivo suggeriti (0–30).', 'semantic-internal-links' ),
+					'description' => __( 'Numero massimo di grassetto/corsivo suggeriti (0–30).', 'semantic-ai' ),
 				],
 			],
 			[
-				'id'       => 'sil_chunk_threshold_chars',
-				'label'    => __( 'Soglia chunking (caratteri)', 'semantic-internal-links' ),
+				'id'       => 'sai_chunk_threshold_chars',
+				'label'    => __( 'Soglia chunking (caratteri)', 'semantic-ai' ),
 				'callback' => 'render_number_field',
 				'args'     => [
-					'option'      => 'sil_chunk_threshold_chars',
+					'option'      => 'sai_chunk_threshold_chars',
 					'default'     => 20000,
 					'min'         => 5000,
 					'max'         => 100000,
-					'description' => __( 'Articoli più lunghi vengono analizzati a blocchi (5.000–100.000).', 'semantic-internal-links' ),
+					'description' => __( 'Articoli più lunghi vengono analizzati a blocchi (5.000–100.000).', 'semantic-ai' ),
 				],
 			],
 			[
-				'id'       => 'sil_target_post_types',
-				'label'    => __( 'Tipi di post candidati', 'semantic-internal-links' ),
+				'id'       => 'sai_target_post_types',
+				'label'    => __( 'Tipi di post candidati', 'semantic-ai' ),
 				'callback' => 'render_post_types_field',
 				'args'     => [
-					'option'      => 'sil_target_post_types',
+					'option'      => 'sai_target_post_types',
 					'default'     => [ 'post', 'page' ],
-					'description' => __( 'Tipi di contenuto da includere come destinazioni dei link.', 'semantic-internal-links' ),
+					'description' => __( 'Tipi di contenuto da includere come destinazioni dei link.', 'semantic-ai' ),
 				],
 			],
 			[
-				'id'       => 'sil_cache_ttl',
-				'label'    => __( 'TTL cache AI (secondi)', 'semantic-internal-links' ),
+				'id'       => 'sai_cache_ttl',
+				'label'    => __( 'TTL cache AI (secondi)', 'semantic-ai' ),
 				'callback' => 'render_number_field',
 				'args'     => [
-					'option'      => 'sil_cache_ttl',
+					'option'      => 'sai_cache_ttl',
 					'default'     => 86400,
 					'min'         => 300,
 					'max'         => 604800,
-					'description' => __( 'Durata della cache delle risposte AI in secondi (min 300, max 604.800 = 7 giorni).', 'semantic-internal-links' ),
+					'description' => __( 'Durata della cache delle risposte AI in secondi (min 300, max 604.800 = 7 giorni).', 'semantic-ai' ),
 				],
 			],
 		];

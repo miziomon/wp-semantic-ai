@@ -19,7 +19,7 @@ import { getTextBlocks } from '../lib/blocks';
 import SuggestionModal from './SuggestionModal';
 import { applyAllSuggestions } from '../lib/apply';
 
-const PLUGIN_NAME = 'semantic-internal-links';
+const PLUGIN_NAME = 'semantic-ai';
 const SIDEBAR_NAME = `${ PLUGIN_NAME }/sidebar`;
 
 /** Flag iniettato da wp_localize_script: indica se il provider AI è disponibile. */
@@ -48,7 +48,7 @@ export default function Sidebar() {
 			const blocks = getTextBlocks();
 
 			if ( blocks.length === 0 ) {
-				setError( __( 'Nessun blocco testuale trovato nel post.', 'semantic-internal-links' ) );
+				setError( __( 'Nessun blocco testuale trovato nel post.', 'semantic-ai' ) );
 				setIsLoading( false );
 				return;
 			}
@@ -70,10 +70,10 @@ export default function Sidebar() {
 				setEmphasis( result.emphasis ?? [] );
 			}
 		} catch ( err ) {
-			if ( err.message === 'sil_no_provider' ) {
-				setError( __( 'Nessun provider AI configurato. Configura un provider in Impostazioni → Connettori.', 'semantic-internal-links' ) );
+			if ( err.message === 'sai_no_provider' ) {
+				setError( __( 'Nessun provider AI configurato. Configura un provider in Impostazioni → Connettori.', 'semantic-ai' ) );
 			} else {
-				setError( err.message ?? __( 'Errore durante l\'analisi.', 'semantic-internal-links' ) );
+				setError( err.message ?? __( 'Errore durante l\'analisi.', 'semantic-ai' ) );
 			}
 		} finally {
 			setIsLoading( false );
@@ -93,33 +93,33 @@ export default function Sidebar() {
 	return (
 		<>
 			<PluginSidebarMoreMenuItem target={ SIDEBAR_NAME }>
-				{ __( 'Semantic Internal Links', 'semantic-internal-links' ) }
+				{ __( 'Semantic AI', 'semantic-ai' ) }
 			</PluginSidebarMoreMenuItem>
 
 			<PluginSidebar
 				name={ SIDEBAR_NAME }
-				title={ __( 'Semantic Internal Links', 'semantic-internal-links' ) }
+				title={ __( 'Semantic AI', 'semantic-ai' ) }
 			>
-				<div className="sil-sidebar">
+				<div className="sai-sidebar">
 					{ ! providerAvailable && (
 						<Notice status="warning" isDismissible={ false }>
-							{ __( 'Nessun provider AI configurato. Configura un provider in Impostazioni → Connettori.', 'semantic-internal-links' ) }
+							{ __( 'Nessun provider AI configurato. Configura un provider in Impostazioni → Connettori.', 'semantic-ai' ) }
 						</Notice>
 					) }
 
-					<p className="sil-sidebar__description">
-						{ __( 'Analizza il post e suggerisce link interni ed enfasi semantica tramite AI.', 'semantic-internal-links' ) }
+					<p className="sai-sidebar__description">
+						{ __( 'Analizza il post e suggerisce link interni ed enfasi semantica tramite AI.', 'semantic-ai' ) }
 					</p>
 
 					<Button
 						variant="primary"
 						onClick={ handleAnalyze }
 						disabled={ ! providerAvailable || isLoading }
-						className="sil-sidebar__button"
+						className="sai-sidebar__button"
 					>
 						{ isLoading
-							? <><Spinner /> { __( 'Analisi in corso…', 'semantic-internal-links' ) }</>
-							: __( 'Analizza link interni', 'semantic-internal-links' )
+							? <><Spinner /> { __( 'Analisi in corso…', 'semantic-ai' ) }</>
+							: __( 'Analizza link interni', 'semantic-ai' )
 						}
 					</Button>
 				</div>

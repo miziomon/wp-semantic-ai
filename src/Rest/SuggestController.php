@@ -15,7 +15,7 @@ use Mavida\SemanticInternalLinks\Content\KeywordExtractor;
 
 /**
  * Registra e gestisce l'endpoint REST:
- *   POST /wp-json/semantic-internal-links/v1/suggest
+ *   POST /wp-json/semantic-ai/v1/suggest
  *
  * Sicurezza:
  * - permission_callback: current_user_can('edit_post', $post_id).
@@ -25,7 +25,7 @@ use Mavida\SemanticInternalLinks\Content\KeywordExtractor;
 class SuggestController {
 
 	/** Namespace dell'API REST. */
-	public const REST_NAMESPACE = 'semantic-internal-links/v1';
+	public const REST_NAMESPACE = 'semantic-ai/v1';
 
 	/** Route dell'endpoint. */
 	public const REST_ROUTE = '/suggest';
@@ -80,16 +80,16 @@ class SuggestController {
 
 		if ( $post_id <= 0 ) {
 			return new \WP_Error(
-				'sil_invalid_post_id',
-				__( 'ID post non valido.', 'semantic-internal-links' ),
+				'sai_invalid_post_id',
+				__( 'ID post non valido.', 'semantic-ai' ),
 				[ 'status' => 400 ]
 			);
 		}
 
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
 			return new \WP_Error(
-				'sil_forbidden',
-				__( 'Non hai i permessi per modificare questo post.', 'semantic-internal-links' ),
+				'sai_forbidden',
+				__( 'Non hai i permessi per modificare questo post.', 'semantic-ai' ),
 				[ 'status' => 403 ]
 			);
 		}
@@ -109,8 +109,8 @@ class SuggestController {
 		// Verifica che il provider AI sia disponibile prima di fare query.
 		if ( ! $this->suggester->is_available() ) {
 			return new \WP_Error(
-				'sil_no_provider',
-				__( 'Nessun provider AI configurato. Vai in Impostazioni → Connettori.', 'semantic-internal-links' ),
+				'sai_no_provider',
+				__( 'Nessun provider AI configurato. Vai in Impostazioni → Connettori.', 'semantic-ai' ),
 				[ 'status' => 503 ]
 			);
 		}
@@ -123,7 +123,7 @@ class SuggestController {
 				[
 					'links'    => [],
 					'emphasis' => [],
-					'notice'   => __( 'Nessun contenuto candidato trovato sul sito.', 'semantic-internal-links' ),
+					'notice'   => __( 'Nessun contenuto candidato trovato sul sito.', 'semantic-ai' ),
 				]
 			);
 		}
@@ -134,8 +134,8 @@ class SuggestController {
 
 		if ( empty( $blocks ) ) {
 			return new \WP_Error(
-				'sil_no_blocks',
-				__( "Nessun blocco testuale trovato nell'articolo.", 'semantic-internal-links' ),
+				'sai_no_blocks',
+				__( "Nessun blocco testuale trovato nell'articolo.", 'semantic-ai' ),
 				[ 'status' => 422 ]
 			);
 		}
@@ -166,13 +166,13 @@ class SuggestController {
 					$post_id = absint( $value );
 
 					if ( $post_id <= 0 ) {
-						return new \WP_Error( 'sil_invalid_post_id', __( 'postId deve essere un intero positivo.', 'semantic-internal-links' ) );
+						return new \WP_Error( 'sai_invalid_post_id', __( 'postId deve essere un intero positivo.', 'semantic-ai' ) );
 					}
 
 					$post = get_post( $post_id );
 
 					if ( null === $post ) {
-						return new \WP_Error( 'sil_post_not_found', __( 'Post non trovato.', 'semantic-internal-links' ) );
+						return new \WP_Error( 'sai_post_not_found', __( 'Post non trovato.', 'semantic-ai' ) );
 					}
 
 					return true;
@@ -192,7 +192,7 @@ class SuggestController {
 				],
 				'validate_callback' => static function ( mixed $value ): bool|\WP_Error {
 					if ( ! is_array( $value ) || empty( $value ) ) {
-						return new \WP_Error( 'sil_no_blocks', __( "Nessun blocco fornito nell'articolo.", 'semantic-internal-links' ) );
+						return new \WP_Error( 'sai_no_blocks', __( "Nessun blocco fornito nell'articolo.", 'semantic-ai' ) );
 					}
 
 					return true;

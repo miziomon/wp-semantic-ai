@@ -16,7 +16,7 @@ import apiFetch from '@wordpress/api-fetch';
 export async function fetchSuggestions( postId, blocks ) {
 	return apiFetch(
 		{
-			path: '/semantic-internal-links/v1/suggest',
+			path: '/semantic-ai/v1/suggest',
 			method: 'POST',
 			data: { postId, blocks },
 		}

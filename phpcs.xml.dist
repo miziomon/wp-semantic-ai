@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
-<ruleset name="Semantic Internal Links">
+<ruleset name="Semantic AI">
     <description>PHPCS ruleset - WordPress Coding Standards con PSR-4</description>
 
     <!-- Percorsi da analizzare -->
     <file>src/</file>
-    <file>semantic-internal-links.php</file>
+    <file>semantic-ai.php</file>
 
     <!-- phpstan-bootstrap.php è un file di stub solo per l'analisi statica. -->
     <exclude-pattern>phpstan-bootstrap.php</exclude-pattern>
@@ -20,10 +20,10 @@
     <config name="testVersion" value="8.1-"/>
 
     <!-- Text domain -->
-    <config name="text_domain" value="semantic-internal-links"/>
+    <config name="text_domain" value="semantic-ai"/>
 
     <!-- Prefisso per funzioni globali e costanti non-namespace -->
-    <config name="prefixes" value="sil_,SIL_"/>
+    <config name="prefixes" value="SAI_,SAI_"/>
 
     <!-- Ruleset principale -->
     <rule ref="WordPress">
@@ -41,7 +41,7 @@
         <!--
             Le namespace PSR-4 (Mavida\SemanticInternalLinks\*) non richiedono
             il prefisso globale: lo scope è già garantito dal namespace.
-            Il prefisso sil_ vale solo per funzioni/costanti globali.
+            Il prefisso SAI_ vale solo per funzioni/costanti globali.
         -->
         <exclude name="WordPress.NamingConventions.PrefixAllGlobals"/>
 

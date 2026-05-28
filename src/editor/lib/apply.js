@@ -218,9 +218,9 @@ export function applyAllSuggestions( selected, blockMap ) {
 
 	const message = skipped > 0
 		/* translators: 1: numero suggerimenti applicati, 2: numero suggerimenti saltati */
-		? __( `Applicati ${ applied }, saltati ${ skipped } (già formattati o non trovati).`, 'semantic-internal-links' )
+		? __( `Applicati ${ applied }, saltati ${ skipped } (già formattati o non trovati).`, 'semantic-ai' )
 		/* translators: numero suggerimenti applicati */
-		: __( `Applicati ${ applied } suggerimenti.`, 'semantic-internal-links' );
+		: __( `Applicati ${ applied } suggerimenti.`, 'semantic-ai' );
 
 	dispatch( 'core/notices' ).createSuccessNotice( message, {
 		type: 'snackbar',

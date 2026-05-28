@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name:       Semantic Internal Links
+ * Plugin Name:       Semantic AI
  * Plugin URI:        https://mavida.com
  * Description:       AI-powered semantic internal link suggestions for the Gutenberg editor.
  * Version:           0.1.0
@@ -8,7 +8,7 @@
  * Requires PHP:      8.1
  * Author:            Maurizio — MAVIDA
  * Author URI:        https://mavida.com
- * Text Domain:       semantic-internal-links
+ * Text Domain:       semantic-ai
  * Domain Path:       /languages
  *
  * @package Mavida\SemanticInternalLinks
@@ -22,16 +22,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Costanti di plugin.
-define( 'SIL_VERSION', '0.1.0' );
-define( 'SIL_PLUGIN_FILE', __FILE__ );
-define( 'SIL_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-define( 'SIL_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+define( 'SAI_VERSION', '0.1.0' );
+define( 'SAI_PLUGIN_FILE', __FILE__ );
+define( 'SAI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'SAI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
 // Autoloader PSR-4 nativo — non richiede vendor/ in produzione.
 spl_autoload_register(
 	function ( string $classname ): void {
 		$prefix   = 'Mavida\\SemanticInternalLinks\\';
-		$base_dir = SIL_PLUGIN_DIR . 'src/';
+		$base_dir = SAI_PLUGIN_DIR . 'src/';
 
 		if ( strncmp( $prefix, $classname, strlen( $prefix ) ) !== 0 ) {
 			return;

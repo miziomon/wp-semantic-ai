@@ -83,7 +83,7 @@ class CandidateProvider {
 		 * @param array<int, array{id: int, title: string, url: string, excerpt: string, terms: string[]}> $candidates Lista candidati.
 		 * @param int $post_id ID del post corrente.
 		 */
-		$candidates = apply_filters( 'sil_candidates', $candidates, $post_id );
+		$candidates = apply_filters( 'sai_candidates', $candidates, $post_id );
 
 		/* @var array<int, array{id: int, title: string, url: string, excerpt: string, terms: string[]}> $candidates */
 		return array_values( $candidates );

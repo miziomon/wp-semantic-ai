@@ -1,7 +1,7 @@
 {
-    "name": "semantic-internal-links",
+    "name": "semantic-ai",
     "version": "0.1.0",
-    "description": "AI-powered semantic internal links for WordPress Gutenberg editor.",
+    "description": "AI-powered Semantic AI for WordPress Gutenberg editor.",
     "private": true,
     "scripts": {
         "build": "wp-scripts build src/editor/index.js assets/scss/editor.scss",

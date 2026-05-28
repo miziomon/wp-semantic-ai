@@ -103,8 +103,8 @@ class LinkSuggester {
 	public function suggest( int $post_id, array $blocks, array $candidates ): array|\WP_Error {
 		if ( ! $this->is_available() ) {
 			return new \WP_Error(
-				'sil_no_provider',
-				__( 'Nessun provider AI configurato. Vai in Impostazioni → Connettori.', 'semantic-internal-links' )
+				'sai_no_provider',
+				__( 'Nessun provider AI configurato. Vai in Impostazioni → Connettori.', 'semantic-ai' )
 			);
 		}
 
@@ -249,8 +249,8 @@ class LinkSuggester {
 
 		if ( ! is_array( $raw_response ) ) {
 			return new \WP_Error(
-				'sil_invalid_response',
-				__( 'Risposta AI non valida (JSON non decodificabile).', 'semantic-internal-links' )
+				'sai_invalid_response',
+				__( 'Risposta AI non valida (JSON non decodificabile).', 'semantic-ai' )
 			);
 		}
 

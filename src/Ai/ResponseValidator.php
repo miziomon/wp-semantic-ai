@@ -138,7 +138,7 @@ class ResponseValidator {
 			 * @param array<string, mixed>|false $validated Suggerimento validato, o false per scartarlo.
 			 * @param array<string, mixed>        $raw_item  Item grezzo dell'AI.
 			 */
-			$validated = apply_filters( 'sil_suggestion_validate_link', $validated, $item );
+			$validated = apply_filters( 'sai_suggestion_validate_link', $validated, $item );
 
 			if ( ! is_array( $validated ) ) {
 				continue;
@@ -210,7 +210,7 @@ class ResponseValidator {
 			 * @param array<string, mixed>|false $validated Suggerimento validato, o false per scartarlo.
 			 * @param array<string, mixed>        $raw_item  Item grezzo dell'AI.
 			 */
-			$validated = apply_filters( 'sil_suggestion_validate_emphasis', $validated, $item );
+			$validated = apply_filters( 'sai_suggestion_validate_emphasis', $validated, $item );
 
 			if ( ! is_array( $validated ) ) {
 				continue;

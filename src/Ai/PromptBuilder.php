@@ -38,7 +38,7 @@ class PromptBuilder {
 		 * @param string $language_hint Hint sulla lingua del contenuto.
 		 */
 		$instruction = apply_filters(
-			'sil_system_instruction',
+			'sai_system_instruction',
 			$this->default_instruction( $language_hint, $max_links, $max_emphasis ),
 			$language_hint
 		);

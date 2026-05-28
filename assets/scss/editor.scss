@@ -1,15 +1,15 @@
 /**
- * Stili BEM per il plugin Semantic Internal Links nell'editor Gutenberg.
+ * Stili BEM per il plugin Semantic AI nell'editor Gutenberg.
  *
- * Blocco principale: .sil-modal
- * Blocco secondario: .sil-sidebar
+ * Blocco principale: .sai-modal
+ * Blocco secondario: .sai-sidebar
  */
 
 /* =========================================================
    Sidebar
    ========================================================= */
 
-.sil-sidebar {
+.sai-sidebar {
 	padding: 12px;
 
 	&__description {
@@ -32,7 +32,7 @@
    Modal — loading
    ========================================================= */
 
-.sil-modal {
+.sai-modal {
 
 	&__loading {
 		display: flex;

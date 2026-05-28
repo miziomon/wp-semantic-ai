@@ -59,15 +59,15 @@ export default function SuggestionModal( {
 
 	return (
 		<Modal
-			title={ __( 'Suggerimenti link interni', 'semantic-internal-links' ) }
+			title={ __( 'Suggerimenti link interni', 'semantic-ai' ) }
 			onRequestClose={ onClose }
-			className="sil-modal"
+			className="sai-modal"
 			size="medium"
 		>
 			{ isLoading && (
-				<div className="sil-modal__loading">
+				<div className="sai-modal__loading">
 					<Spinner />
-					<p>{ __( 'Analisi in corso…', 'semantic-internal-links' ) }</p>
+					<p>{ __( 'Analisi in corso…', 'semantic-ai' ) }</p>
 				</div>
 			) }
 
@@ -79,23 +79,23 @@ export default function SuggestionModal( {
 
 			{ ! isLoading && ! error && links.length === 0 && emphasis.length === 0 && (
 				<Notice status="info" isDismissible={ false }>
-					{ __( 'Nessun suggerimento trovato per questo articolo.', 'semantic-internal-links' ) }
+					{ __( 'Nessun suggerimento trovato per questo articolo.', 'semantic-ai' ) }
 				</Notice>
 			) }
 
 			{ ! isLoading && ! error && links.length > 0 && (
 				<PanelBody
-					title={ __( 'Link interni', 'semantic-internal-links' ) }
-					className="sil-modal__section"
+					title={ __( 'Link interni', 'semantic-ai' ) }
+					className="sai-modal__section"
 					initialOpen={ true }
 				>
-					<div className="sil-modal__section-controls">
+					<div className="sai-modal__section-controls">
 						<Button variant="link" onClick={ () => selectAll( setSelectedLinks, links ) }>
-							{ __( 'Seleziona tutto', 'semantic-internal-links' ) }
+							{ __( 'Seleziona tutto', 'semantic-ai' ) }
 						</Button>
 						{ ' · ' }
 						<Button variant="link" onClick={ () => deselectAll( setSelectedLinks ) }>
-							{ __( 'Deseleziona tutto', 'semantic-internal-links' ) }
+							{ __( 'Deseleziona tutto', 'semantic-ai' ) }
 						</Button>
 					</div>
 					{ links.map( ( item, i ) => (
@@ -112,17 +112,17 @@ export default function SuggestionModal( {
 
 			{ ! isLoading && ! error && emphasis.length > 0 && (
 				<PanelBody
-					title={ __( 'Enfasi semantica', 'semantic-internal-links' ) }
-					className="sil-modal__section"
+					title={ __( 'Enfasi semantica', 'semantic-ai' ) }
+					className="sai-modal__section"
 					initialOpen={ true }
 				>
-					<div className="sil-modal__section-controls">
+					<div className="sai-modal__section-controls">
 						<Button variant="link" onClick={ () => selectAll( setSelectedEmphasis, emphasis ) }>
-							{ __( 'Seleziona tutto', 'semantic-internal-links' ) }
+							{ __( 'Seleziona tutto', 'semantic-ai' ) }
 						</Button>
 						{ ' · ' }
 						<Button variant="link" onClick={ () => deselectAll( setSelectedEmphasis ) }>
-							{ __( 'Deseleziona tutto', 'semantic-internal-links' ) }
+							{ __( 'Deseleziona tutto', 'semantic-ai' ) }
 						</Button>
 					</div>
 					{ emphasis.map( ( item, i ) => (
@@ -138,13 +138,13 @@ export default function SuggestionModal( {
 			) }
 
 			{ ! isLoading && (
-				<div className="sil-modal__footer">
+				<div className="sai-modal__footer">
 					<Button variant="secondary" onClick={ onClose }>
-						{ __( 'Annulla', 'semantic-internal-links' ) }
+						{ __( 'Annulla', 'semantic-ai' ) }
 					</Button>
 					{ ! error && ( links.length > 0 || emphasis.length > 0 ) && (
 						<Button variant="primary" onClick={ handleApply }>
-							{ __( 'Applica selezionati', 'semantic-internal-links' ) }
+							{ __( 'Applica selezionati', 'semantic-ai' ) }
 						</Button>
 					) }
 				</div>
