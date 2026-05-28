@@ -14,9 +14,11 @@ import apiFetch from '@wordpress/api-fetch';
  * @throws {Error} In caso di errore di rete o risposta non valida.
  */
 export async function fetchSuggestions( postId, blocks ) {
-	return apiFetch( {
-		path: '/semantic-internal-links/v1/suggest',
-		method: 'POST',
-		data: { postId, blocks },
-	} );
+	return apiFetch(
+		{
+			path: '/semantic-internal-links/v1/suggest',
+			method: 'POST',
+			data: { postId, blocks },
+		}
+	);
 }

@@ -10,6 +10,9 @@
 /.wp-env/
 /.wp-env.override.json
 
+# Node.js binaries estratti da nvm nella root del progetto
+/v*/
+
 # IDE e OS
 .idea/
 .vscode/
