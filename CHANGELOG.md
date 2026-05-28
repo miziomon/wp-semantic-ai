@@ -7,6 +7,14 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-05-28
+
+### Added
+
+- Link **Impostazioni** nell'elenco plugin (colonna azioni) per accesso rapido alla pagina di configurazione.
+- Link **GitHub** nella riga meta dell'elenco plugin con ancora `#doc` (`https://github.com/miziomon/wp-semantic-ai#doc`).
+- Sezione **Diagnostica** in cima alla pagina Impostazioni con pulsante "Testa connessione AI": invia una richiesta minimale al provider configurato (usando l'ordine di preferenza modelli impostato) e mostra l'esito in tempo reale senza ricaricare la pagina.
+
 ## [0.2.4] - 2026-05-28
 
 ### Added
@@ -76,7 +84,8 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Filtri di estensione: `SAI_candidates`, `SAI_system_instruction`, `SAI_suggestion_validate_link`.
 - Tooling: `@wordpress/scripts`, `@wordpress/env`, PHPCS (WPCS), PHPStan livello 8 con stubs WP 7.0.
 
-[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.5...HEAD
+[0.2.5]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.1...v0.2.2

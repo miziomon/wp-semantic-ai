@@ -47,6 +47,11 @@ final class Plugin {
 		add_action( 'save_post', [ $this, 'invalidate_cache_on_save' ] );
 		// Aggiornamenti automatici tramite GitHub Releases.
 		( new \Mavida\SemanticInternalLinks\Updater() )->register();
+		// Link rapidi nell'elenco plugin.
+		add_filter( 'plugin_action_links_' . plugin_basename( SAI_PLUGIN_FILE ), [ $this, 'add_action_links' ] );
+		add_filter( 'plugin_row_meta', [ $this, 'add_row_meta' ], 10, 2 );
+		// Test AJAX connessione AI dalla pagina impostazioni.
+		add_action( 'wp_ajax_sai_test_ai_connection', [ $this, 'handle_test_ai_connection' ] );
 	}
 
 	/**
@@ -141,6 +146,91 @@ final class Plugin {
 	public function register_settings_page(): void {
 		$settings_page = new \Mavida\SemanticInternalLinks\Settings\SettingsPage();
 		$settings_page->register();
+	}
+
+	/**
+	 * Aggiunge il link "Impostazioni" nella colonna azioni dell'elenco plugin.
+	 *
+	 * @param string[] $links Link di azione correnti.
+	 * @return string[] Link aggiornati.
+	 */
+	public function add_action_links( array $links ): array {
+		$settings_link = sprintf(
+			'<a href="%s">%s</a>',
+			esc_url( admin_url( 'options-general.php?page=' . \Mavida\SemanticInternalLinks\Settings\SettingsPage::MENU_SLUG ) ),
+			esc_html__( 'Impostazioni', 'semantic-ai' )
+		);
+		array_unshift( $links, $settings_link );
+		return $links;
+	}
+
+	/**
+	 * Aggiunge il link "GitHub" nella riga meta dell'elenco plugin.
+	 *
+	 * @param string[] $links  Link meta correnti.
+	 * @param string   $plugin Path del plugin corrente.
+	 * @return string[] Link aggiornati.
+	 */
+	public function add_row_meta( array $links, string $plugin ): array {
+		if ( plugin_basename( SAI_PLUGIN_FILE ) !== $plugin ) {
+			return $links;
+		}
+		$links[] = sprintf(
+			'<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>',
+			esc_url( 'https://github.com/miziomon/wp-semantic-ai#doc' ),
+			esc_html__( 'GitHub', 'semantic-ai' )
+		);
+		return $links;
+	}
+
+	/** Gestisce il test AJAX della connessione al provider AI configurato. */
+	public function handle_test_ai_connection(): void {
+		check_ajax_referer( 'sai_test_ai', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Non autorizzato.', 'semantic-ai' ) );
+			return;
+		}
+
+		if ( ! function_exists( 'wp_ai_client_prompt' ) ) {
+			wp_send_json_error( __( 'WP AI Client non disponibile. Richiede WordPress 7.0+.', 'semantic-ai' ) );
+			return;
+		}
+
+		$builder = wp_ai_client_prompt( 'Reply with the single word OK and nothing else.' );
+
+		if ( is_wp_error( $builder ) ) {
+			wp_send_json_error( $builder->get_error_message() );
+			return;
+		}
+
+		if ( ! $builder->is_supported_for_text_generation() ) {
+			wp_send_json_error( __( 'Nessun provider AI configurato. Vai in Impostazioni → Connettori AI.', 'semantic-ai' ) );
+			return;
+		}
+
+		$raw_prefs   = self::get_option( 'model_preferences' );
+		/* @var string[] $model_prefs */
+		$model_prefs = ( is_array( $raw_prefs ) && count( $raw_prefs ) > 0 )
+			? array_values( array_map( 'strval', $raw_prefs ) )
+			: [ 'claude-sonnet-4-6', 'gemini-3.5-flash', 'gpt-4.1' ];
+
+		$builder
+			->using_temperature( 0.0 )
+			->using_max_tokens( 10 )
+			->using_model_preference( ...$model_prefs );
+
+		$result = $builder->generate_text();
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( $result->get_error_message() );
+			return;
+		}
+
+		wp_send_json_success( [
+			'message'  => __( 'Connessione AI funzionante.', 'semantic-ai' ),
+			'response' => sanitize_text_field( (string) $result ),
+		] );
 	}
 
 	/**

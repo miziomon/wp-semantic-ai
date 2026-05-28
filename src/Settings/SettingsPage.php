@@ -32,6 +32,9 @@ class SettingsPage {
 	/** Gruppo di opzioni per register_setting. */
 	public const OPTION_GROUP = 'sai_options';
 
+	/** Nome della sezione diagnostica (prima sezione visualizzata). */
+	private const SECTION_DIAGNOSTICS = 'sai_section_diagnostics';
+
 	/** Nome della sezione principale. */
 	private const SECTION_MAIN = 'sai_section_main';
 
@@ -79,6 +82,13 @@ class SettingsPage {
 	/** Registra le opzioni, le sezioni e i campi tramite Settings API. */
 	public function register_settings(): void {
 		$this->register_all_settings();
+
+		add_settings_section(
+			self::SECTION_DIAGNOSTICS,
+			__( 'Diagnostica', 'semantic-ai' ),
+			[ $this, 'render_section_diagnostics_description' ],
+			self::MENU_SLUG
+		);
 
 		add_settings_section(
 			self::SECTION_MAIN,
@@ -131,6 +141,31 @@ class SettingsPage {
 		) . '</p>';
 	}
 
+	/** Renderizza la descrizione della sezione diagnostica. */
+	public function render_section_diagnostics_description(): void {
+		echo '<p>' . esc_html__(
+			'Verifica che il provider AI configurato in WordPress risponda correttamente.',
+			'semantic-ai'
+		) . '</p>';
+	}
+
+	/** Renderizza il pulsante di test della connessione AI. */
+	public function render_test_connection_field(): void {
+		$nonce = wp_create_nonce( 'sai_test_ai' );
+
+		printf(
+			'<button type="button" id="sai-test-btn" class="button" data-nonce="%s">%s</button>'
+			. '<span id="sai-test-result" style="margin-left:10px;display:none;"></span>',
+			esc_attr( $nonce ),
+			esc_html__( 'Testa connessione AI', 'semantic-ai' )
+		);
+
+		echo '<p class="description">' . esc_html__(
+			'Invia una richiesta minimale al provider AI configurato (usa i modelli nell\'ordine di preferenza impostato sopra) e mostra l\'esito in tempo reale.',
+			'semantic-ai'
+		) . '</p>';
+	}
+
 	/** Renderizza la descrizione della sezione modelli AI. */
 	public function render_section_models_description(): void {
 		echo '<p>' . esc_html__(
@@ -163,6 +198,14 @@ class SettingsPage {
 
 	/** Aggiunge tutti i campi della pagina impostazioni. */
 	private function add_all_fields(): void {
+		add_settings_field(
+			'sai_test_connection',
+			__( 'Connessione AI', 'semantic-ai' ),
+			[ $this, 'render_test_connection_field' ],
+			self::MENU_SLUG,
+			self::SECTION_DIAGNOSTICS
+		);
+
 		$main_fields = [
 			[
 				'id'       => 'sai_max_candidates',
@@ -605,6 +648,47 @@ class SettingsPage {
 			});
 
 			sync();
+
+		// Test connessione AI
+		var testBtn    = document.getElementById('sai-test-btn');
+		var testResult = document.getElementById('sai-test-result');
+
+		if (testBtn && testResult) {
+			testBtn.addEventListener('click', function () {
+				testBtn.disabled    = true;
+				testBtn.textContent = '<?php echo esc_js( __( 'Test in corso…', 'semantic-ai' ) ); ?>';
+				testResult.style.display = 'none';
+
+				var formData = new FormData();
+				formData.append('action', 'sai_test_ai_connection');
+				formData.append('nonce',  testBtn.dataset.nonce);
+
+				fetch(ajaxurl, { method: 'POST', body: formData, credentials: 'same-origin' })
+					.then(function (r) { return r.json(); })
+					.then(function (data) {
+						testResult.style.display = 'inline';
+						if (data.success) {
+							testResult.style.color   = '#0a7a0a';
+							testResult.style.fontWeight = 'bold';
+							testResult.textContent   = '✓ ' + (data.data.message || 'OK');
+						} else {
+							testResult.style.color   = '#a00';
+							testResult.style.fontWeight = 'normal';
+							testResult.textContent   = '✗ ' + (typeof data.data === 'string' ? data.data : 'Errore sconosciuto');
+						}
+					})
+					.catch(function (e) {
+						testResult.style.display   = 'inline';
+						testResult.style.color     = '#a00';
+						testResult.style.fontWeight = 'normal';
+						testResult.textContent     = '✗ Errore di rete: ' + e.message;
+					})
+					.finally(function () {
+						testBtn.disabled    = false;
+						testBtn.textContent = '<?php echo esc_js( __( 'Testa connessione AI', 'semantic-ai' ) ); ?>';
+					});
+			});
+		}
 		})();
 		</script>
 		<?php

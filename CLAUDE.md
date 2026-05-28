@@ -1,5 +1,8 @@
 # CLAUDE.md
 
+
+quando hai finito chiedi se cambiare versione ed aggiorna changelog, e poi procedere con commit e push creazione nuovo tag coerente con il numero di versione
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Commands

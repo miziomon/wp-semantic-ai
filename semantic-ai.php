@@ -3,7 +3,7 @@
  * Plugin Name:       Semantic AI
  * Plugin URI:        https://mavida.com
  * Description:       AI-powered semantic internal link suggestions for the Gutenberg editor.
- * Version:           0.2.4
+ * Version:           0.2.5
  * Requires at least: 7.0
  * Requires PHP:      8.1
  * Author:            Maurizio — MAVIDA
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Costanti di plugin.
-define( 'SAI_VERSION', '0.2.4' );
+define( 'SAI_VERSION', '0.2.5' );
 define( 'SAI_PLUGIN_FILE', __FILE__ );
 define( 'SAI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SAI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
