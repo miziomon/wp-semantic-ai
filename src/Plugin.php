@@ -45,6 +45,8 @@ final class Plugin {
 		add_action( 'admin_menu', [ $this, 'register_settings_page' ] );
 		// Invalida la cache AI quando il post viene salvato.
 		add_action( 'save_post', [ $this, 'invalidate_cache_on_save' ] );
+		// Aggiornamenti automatici tramite GitHub Releases.
+		( new \Mavida\SemanticInternalLinks\Updater() )->register();
 	}
 
 	/**

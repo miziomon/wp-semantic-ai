@@ -7,6 +7,12 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-05-28
+
+### Added
+
+- Aggiornamenti automatici tramite GitHub Releases: `Updater.php` aggiunge il plugin al meccanismo nativo di WordPress senza librerie di terze parti. Controlla l'API `api.github.com/repos/miziomon/wp-semantic-ai/releases/latest`, confronta la versione e, se disponibile, mostra la notifica di aggiornamento direttamente nella dashboard WP. La risposta API viene messa in cache con un transient da 12 ore.
+
 ## [0.2.1] - 2026-05-28
 
 ### Fixed
@@ -44,7 +50,8 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Filtri di estensione: `SAI_candidates`, `SAI_system_instruction`, `SAI_suggestion_validate_link`.
 - Tooling: `@wordpress/scripts`, `@wordpress/env`, PHPCS (WPCS), PHPStan livello 8 con stubs WP 7.0.
 
-[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/miziomon/wp-semantic-ai/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/miziomon/wp-semantic-ai/releases/tag/v0.1.0
