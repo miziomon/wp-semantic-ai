@@ -6,11 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### PHP
 ```bash
-composer install          # installa dipendenze PHP
+composer install          # installa strumenti dev (phpcs, phpstan) — NON serve in produzione
 composer phpcs            # linting (WordPress Coding Standards)
 composer phpcbf           # auto-fix PHPCS violations
 composer phpstan          # analisi statica livello 8
 ```
+
+> **Nota:** il plugin usa un autoloader PSR-4 nativo (`spl_autoload_register` in `semantic-internal-links.php`). `vendor/` non è necessario in produzione — lo zip di GitHub funziona senza `composer install`.
 
 ### JavaScript / CSS
 ```bash

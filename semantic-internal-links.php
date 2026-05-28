@@ -27,8 +27,24 @@ define( 'SIL_PLUGIN_FILE', __FILE__ );
 define( 'SIL_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SIL_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
-// Autoload Composer (PSR-4).
-require_once SIL_PLUGIN_DIR . 'vendor/autoload.php';
+// Autoloader PSR-4 nativo — non richiede vendor/ in produzione.
+spl_autoload_register(
+	function ( string $classname ): void {
+		$prefix   = 'Mavida\\SemanticInternalLinks\\';
+		$base_dir = SIL_PLUGIN_DIR . 'src/';
+
+		if ( strncmp( $prefix, $classname, strlen( $prefix ) ) !== 0 ) {
+			return;
+		}
+
+		$relative = substr( $classname, strlen( $prefix ) );
+		$file     = $base_dir . str_replace( '\\', '/', $relative ) . '.php';
+
+		if ( file_exists( $file ) ) {
+			require $file;
+		}
+	}
+);
 
 // Bootstrap del plugin.
 \Mavida\SemanticInternalLinks\Plugin::instance()->boot();
