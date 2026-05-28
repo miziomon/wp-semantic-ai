@@ -7,6 +7,14 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-05-28
+
+### Changed
+
+- Spostata la sezione **Diagnostica** (test connessione AI) dopo "Preferenze modelli AI" e prima di "Aggiornamenti automatici".
+- Fix link GitHub nell'elenco plugin: rimosso frammento `#doc` dall'URL.
+- Fix pulsante "Testa connessione AI": rimossi `using_temperature(0.0)` e `using_max_tokens(10)` che causavano errore "Missing candidates[0].content" su Gemini 3.5 Flash.
+
 ## [0.2.5] - 2026-05-28
 
 ### Added
@@ -84,7 +92,8 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Filtri di estensione: `SAI_candidates`, `SAI_system_instruction`, `SAI_suggestion_validate_link`.
 - Tooling: `@wordpress/scripts`, `@wordpress/env`, PHPCS (WPCS), PHPStan livello 8 con stubs WP 7.0.
 
-[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.5...HEAD
+[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.6...HEAD
+[0.2.6]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.2...v0.2.3

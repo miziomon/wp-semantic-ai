@@ -84,13 +84,6 @@ class SettingsPage {
 		$this->register_all_settings();
 
 		add_settings_section(
-			self::SECTION_DIAGNOSTICS,
-			__( 'Diagnostica', 'semantic-ai' ),
-			[ $this, 'render_section_diagnostics_description' ],
-			self::MENU_SLUG
-		);
-
-		add_settings_section(
 			self::SECTION_MAIN,
 			__( 'Parametri di analisi', 'semantic-ai' ),
 			[ $this, 'render_section_description' ],
@@ -101,6 +94,13 @@ class SettingsPage {
 			self::SECTION_MODELS,
 			__( 'Preferenze modelli AI', 'semantic-ai' ),
 			[ $this, 'render_section_models_description' ],
+			self::MENU_SLUG
+		);
+
+		add_settings_section(
+			self::SECTION_DIAGNOSTICS,
+			__( 'Diagnostica', 'semantic-ai' ),
+			[ $this, 'render_section_diagnostics_description' ],
 			self::MENU_SLUG
 		);
 
