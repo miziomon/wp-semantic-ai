@@ -680,8 +680,12 @@ class SettingsPage {
 		$result_nonce = wp_create_nonce( 'sai_get_log_result' );
 		?>
 		<h2><?php esc_html_e( 'Log analisi', 'semantic-ai' ); ?></h2>
-		<p><?php esc_html_e( 'Storico delle analisi AI eseguite. Vengono conservate le ultime 50 voci.', 'semantic-ai' ); ?></p>
-		<p>
+		<p><?php esc_html_e( 'Storico delle analisi AI eseguite (un record per articolo — il più recente).', 'semantic-ai' ); ?></p>
+		<p style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+			<input type="search"
+					id="sai-log-search"
+					placeholder="<?php esc_attr_e( 'Filtra per titolo post…', 'semantic-ai' ); ?>"
+					style="width:280px;" />
 			<button type="button" id="sai-clear-log-btn" class="button"
 					data-nonce="<?php echo esc_attr( $clear_nonce ); ?>">
 				<?php esc_html_e( 'Svuota log', 'semantic-ai' ); ?>
@@ -691,12 +695,14 @@ class SettingsPage {
 		<?php if ( empty( $entries ) ) : ?>
 			<p><?php esc_html_e( 'Nessuna analisi registrata. Esegui un\'analisi da Gutenberg per vedere i risultati qui.', 'semantic-ai' ); ?></p>
 		<?php else : ?>
-			<table class="widefat striped" style="margin-top:12px;">
+			<table class="widefat striped" id="sai-log-table" style="margin-top:12px;">
 				<thead>
 					<tr>
-						<th><?php esc_html_e( 'Data', 'semantic-ai' ); ?></th>
 						<th><?php esc_html_e( 'Post', 'semantic-ai' ); ?></th>
-						<th style="text-align:center;"><?php esc_html_e( 'Candidati', 'semantic-ai' ); ?></th>
+						<th><?php esc_html_e( 'Data', 'semantic-ai' ); ?></th>
+						<th style="text-align:center;" title="<?php esc_attr_e( 'Clicca per vedere i candidati usati', 'semantic-ai' ); ?>">
+							<?php esc_html_e( 'Candidati', 'semantic-ai' ); ?> ↗
+						</th>
 						<th style="text-align:center;"><?php esc_html_e( 'Link', 'semantic-ai' ); ?></th>
 						<th style="text-align:center;"><?php esc_html_e( 'Enfasi', 'semantic-ai' ); ?></th>
 						<th style="text-align:center;"><?php esc_html_e( 'Cache', 'semantic-ai' ); ?></th>
@@ -718,8 +724,7 @@ class SettingsPage {
 					$raw_edit_link = $post_id_entry > 0 ? get_edit_post_link( $post_id_entry ) : null;
 					$edit_link     = is_string( $raw_edit_link ) ? $raw_edit_link : '';
 					?>
-					<tr>
-						<td><?php echo esc_html( $timestamp ); ?></td>
+					<tr data-title="<?php echo esc_attr( mb_strtolower( $post_title, 'UTF-8' ) ); ?>">
 						<td>
 							<?php if ( '' !== $edit_link ) : ?>
 								<a href="<?php echo esc_url( $edit_link ); ?>"><?php echo esc_html( $post_title ); ?></a>
@@ -727,7 +732,21 @@ class SettingsPage {
 								<?php echo esc_html( $post_title ); ?>
 							<?php endif; ?>
 						</td>
-						<td style="text-align:center;"><?php echo absint( $cand_count ); ?></td>
+						<td><?php echo esc_html( $timestamp ); ?></td>
+						<td style="text-align:center;">
+							<?php if ( $cand_count > 0 ) : ?>
+								<button type="button"
+										class="button-link sai-view-candidates"
+										style="color:#2271b1;text-decoration:underline;cursor:pointer;"
+										data-id="<?php echo esc_attr( $entry_id ); ?>"
+										data-title="<?php echo esc_attr( $post_title ); ?>"
+										data-nonce="<?php echo esc_attr( $result_nonce ); ?>">
+									<?php echo absint( $cand_count ); ?>
+								</button>
+							<?php else : ?>
+								0
+							<?php endif; ?>
+						</td>
 						<td style="text-align:center;"><?php echo absint( $links_count ); ?></td>
 						<td style="text-align:center;"><?php echo absint( $emph_count ); ?></td>
 						<td style="text-align:center;">
@@ -758,6 +777,20 @@ class SettingsPage {
 					</button>
 				</div>
 				<div id="sai-log-result-content"></div>
+			</div>
+		</div>
+
+		<!-- Modal inline per i candidati -->
+		<div id="sai-candidates-modal"
+			style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:99999;">
+			<div style="background:#fff;max-width:680px;margin:60px auto;padding:24px;max-height:80vh;overflow-y:auto;border-radius:4px;box-shadow:0 4px 24px rgba(0,0,0,.3);">
+				<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+					<h2 id="sai-candidates-modal-title" style="margin:0;"><?php esc_html_e( 'Candidati', 'semantic-ai' ); ?></h2>
+					<button type="button" id="sai-candidates-modal-close" class="button">
+						<?php esc_html_e( 'Chiudi', 'semantic-ai' ); ?>
+					</button>
+				</div>
+				<div id="sai-candidates-content"></div>
 			</div>
 		</div>
 		<?php
@@ -983,6 +1016,77 @@ class SettingsPage {
 		if (logModalClose && logModal) {
 			logModalClose.addEventListener('click', function(){ logModal.style.display = 'none'; });
 			logModal.addEventListener('click', function(e){ if (e.target === logModal) { logModal.style.display = 'none'; } });
+		}
+
+		// ── Candidati modal ───────────────────────────────────────────────────
+		var candidatesModal      = document.getElementById('sai-candidates-modal');
+		var candidatesModalClose = document.getElementById('sai-candidates-modal-close');
+		var candidatesContent    = document.getElementById('sai-candidates-content');
+		var candidatesTitle      = document.getElementById('sai-candidates-modal-title');
+
+		document.querySelectorAll('.sai-view-candidates').forEach(function (btn) {
+			btn.addEventListener('click', function () {
+				var fd = new FormData();
+				fd.append('action', 'sai_get_log_result');
+				fd.append('nonce',  btn.dataset.nonce);
+				fd.append('id',     btn.dataset.id);
+				fetch(ajaxurl, { method:'POST', body:fd, credentials:'same-origin' })
+					.then(function(r){ return r.json(); })
+					.then(function(data){
+						if (data.success && candidatesModal && candidatesContent) {
+							candidatesContent.innerHTML = '';
+							if (candidatesTitle) {
+								candidatesTitle.textContent = '<?php echo esc_js( __( 'Candidati per', 'semantic-ai' ) ); ?> «' + (btn.dataset.title || '') + '»';
+							}
+							var candidates = data.data._candidates || [];
+							if (candidates.length === 0) {
+								candidatesContent.textContent = '<?php echo esc_js( __( 'Nessun candidato salvato per questa analisi.', 'semantic-ai' ) ); ?>';
+							} else {
+								var ul = document.createElement('ul');
+								ul.style.cssText = 'list-style:none;margin:0;padding:0;';
+								candidates.forEach(function(c) {
+									var li = document.createElement('li');
+									li.style.cssText = 'padding:8px 0;border-bottom:1px solid #f0f0f0;';
+									var a = document.createElement('a');
+									a.href = c.url || '#';
+									a.target = '_blank';
+									a.rel = 'noopener noreferrer';
+									a.textContent = c.title || c.url || '';
+									a.style.fontWeight = '600';
+									li.appendChild(a);
+									if (c.excerpt) {
+										var small = document.createElement('p');
+										small.style.cssText = 'margin:2px 0 0;color:#666;font-size:12px;';
+										small.textContent = c.excerpt.length > 120 ? c.excerpt.substring(0,120) + '…' : c.excerpt;
+										li.appendChild(small);
+									}
+									ul.appendChild(li);
+								});
+								candidatesContent.appendChild(ul);
+							}
+							candidatesModal.style.display = 'block';
+						}
+					});
+			});
+		});
+
+		if (candidatesModalClose && candidatesModal) {
+			candidatesModalClose.addEventListener('click', function(){ candidatesModal.style.display = 'none'; });
+			candidatesModal.addEventListener('click', function(e){ if (e.target === candidatesModal) { candidatesModal.style.display = 'none'; } });
+		}
+
+		// ── Ricerca nel log ───────────────────────────────────────────────────
+		var logSearch = document.getElementById('sai-log-search');
+		var logTable  = document.getElementById('sai-log-table');
+
+		if (logSearch && logTable) {
+			logSearch.addEventListener('input', function () {
+				var query = logSearch.value.toLowerCase();
+				logTable.querySelectorAll('tbody tr').forEach(function (row) {
+					var title = (row.dataset.title || '').toLowerCase();
+					row.style.display = title.includes(query) ? '' : 'none';
+				});
+			});
 		}
 
 		})();

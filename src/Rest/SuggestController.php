@@ -154,7 +154,7 @@ class SuggestController {
 
 		// Registra l'analisi nel log.
 		$log = new \Mavida\SemanticInternalLinks\Ai\AnalysisLog();
-		$log->add( $post_id, $result, count( $candidates ), $from_cache );
+		$log->add( $post_id, $result, count( $candidates ), $from_cache, $candidates );
 
 		return rest_ensure_response( $result );
 	}

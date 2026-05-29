@@ -7,6 +7,23 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-05-29
+
+### Fixed
+
+- **Step 0 bloccato su loading**: la cattura per riferimento di `stepIdx` nei closure funzionali di `setSteps` causava aggiornamenti sull'indice sbagliato. Riscritta la logica con sostituzione completa dell'array ad ogni checkpoint (pattern "replace-full-array").
+- **Risultati non visibili dopo analisi**: `useState(() => new Set(links.map(...)))` inizializzava i set di selezione solo al primo mount della modale; con la modale aperta durante l'analisi i set restavano vuoti. Sostituito con `useEffect` sincronizzato sui prop `links` e `emphasis`.
+- **Pulsante sidebar bloccato dopo chiusura modale**: chiudere la modale con X durante un'analisi non azzerava `steps`, mantenendo `isLoading=true` e disabilitando il pulsante. `handleClose` ora azzera gli step e setta il flag `cancelledRef`.
+
+### Added
+
+- **Pulsante "Interrompi analisi"**: CTA rossa visibile nella modale durante il caricamento. Cancella l'analisi in corso e chiude la modale.
+- **Step analisi più dettagliati**: 4 step al completamento — raccolta blocchi, candidati trovati, analisi link, analisi enfasi.
+- **Log analisi upsert**: un solo record per articolo (il più recente). Le analisi successive dello stesso post aggiornano la riga esistente.
+- **Log analisi — candidati cliccabili**: click sul conteggio candidati apre un modal con la lista dei post candidati (titolo + URL + excerpt).
+- **Log analisi — barra di ricerca**: filtra in tempo reale le righe del log per titolo del post.
+- **Log analisi — colonne riordinate**: Post come prima colonna, poi Data, Candidati, Link, Enfasi, Cache, Visualizza.
+
 ## [0.3.0] - 2026-05-29
 
 ### Added
@@ -125,7 +142,8 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Filtri di estensione: `SAI_candidates`, `SAI_system_instruction`, `SAI_suggestion_validate_link`.
 - Tooling: `@wordpress/scripts`, `@wordpress/env`, PHPCS (WPCS), PHPStan livello 8 con stubs WP 7.0.
 
-[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/miziomon/wp-semantic-ai/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.7...v0.3.0
 [0.2.7]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.6...v0.2.7
 [0.2.6]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.5...v0.2.6

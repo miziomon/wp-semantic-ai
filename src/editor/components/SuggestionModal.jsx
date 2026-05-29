@@ -4,7 +4,7 @@
  * Mostra il progresso dell'analisi tramite l'array steps.
  */
 
-import { useState, useCallback } from '@wordpress/element';
+import { useState, useCallback, useEffect } from '@wordpress/element';
 import {
 	Modal,
 	Button,
@@ -25,6 +25,7 @@ import SuggestionRow from './SuggestionRow';
  * @param {Function}  props.onApply      Callback con {links, emphasis} selezionati.
  * @param {Function}  props.onClose      Callback chiusura modale.
  * @param {Function}  props.onReanalyze  Callback per rilanciare l'analisi.
+ * @param {Function}  props.onInterrupt  Callback per interrompere l'analisi in corso.
  */
 export default function SuggestionModal( {
 	isOpen,
@@ -35,9 +36,21 @@ export default function SuggestionModal( {
 	onApply,
 	onClose,
 	onReanalyze,
+	onInterrupt,
 } ) {
-	const [ selectedLinks, setSelectedLinks ]       = useState( () => new Set( links.map( ( _, i ) => i ) ) );
-	const [ selectedEmphasis, setSelectedEmphasis ] = useState( () => new Set( emphasis.map( ( _, i ) => i ) ) );
+	// Fix bug 2: inizializzazione vuota + useEffect per sincronizzare con i props.
+	// La modale rimane montata durante l'analisi, quindi i set devono aggiornarsi
+	// quando links/emphasis cambiano (dopo il completamento della chiamata AI).
+	const [ selectedLinks, setSelectedLinks ]       = useState( new Set() );
+	const [ selectedEmphasis, setSelectedEmphasis ] = useState( new Set() );
+
+	useEffect( () => {
+		setSelectedLinks( new Set( links.map( ( _, i ) => i ) ) );
+	}, [ links ] );
+
+	useEffect( () => {
+		setSelectedEmphasis( new Set( emphasis.map( ( _, i ) => i ) ) );
+	}, [ emphasis ] );
 
 	const isLoading = steps.some( ( s ) => s.status === 'loading' );
 
@@ -163,23 +176,36 @@ export default function SuggestionModal( {
 				</PanelBody>
 			) }
 
-			{ ! isLoading && (
-				<div className="sai-modal__footer">
-					<Button variant="secondary" onClick={ onClose }>
-						{ __( 'Annulla', 'semantic-ai' ) }
+			<div className="sai-modal__footer">
+				{ /* Pulsante interrompi: visibile e prominente solo durante il caricamento */ }
+				{ isLoading && onInterrupt && (
+					<Button
+						variant="primary"
+						onClick={ onInterrupt }
+						style={ { backgroundColor: '#d63638', borderColor: '#d63638' } }
+					>
+						{ __( 'Interrompi analisi', 'semantic-ai' ) }
 					</Button>
-					{ onReanalyze && (
-						<Button variant="secondary" onClick={ onReanalyze }>
-							{ __( 'Rieffettua analisi', 'semantic-ai' ) }
+				) }
+
+				{ ! isLoading && (
+					<>
+						<Button variant="secondary" onClick={ onClose }>
+							{ __( 'Annulla', 'semantic-ai' ) }
 						</Button>
-					) }
-					{ ! error && ( links.length > 0 || emphasis.length > 0 ) && (
-						<Button variant="primary" onClick={ handleApply }>
-							{ __( 'Applica selezionati', 'semantic-ai' ) }
-						</Button>
-					) }
-				</div>
-			) }
+						{ onReanalyze && (
+							<Button variant="secondary" onClick={ onReanalyze }>
+								{ __( 'Rieffettua analisi', 'semantic-ai' ) }
+							</Button>
+						) }
+						{ ! error && ( links.length > 0 || emphasis.length > 0 ) && (
+							<Button variant="primary" onClick={ handleApply }>
+								{ __( 'Applica selezionati', 'semantic-ai' ) }
+							</Button>
+						) }
+					</>
+				) }
+			</div>
 		</Modal>
 	);
 }
