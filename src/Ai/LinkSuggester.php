@@ -117,6 +117,7 @@ class LinkSuggester {
 		$cached    = $this->cache->get( $cache_key );
 
 		if ( null !== $cached ) {
+			$cached['_from_cache'] = true;
 			return $cached;
 		}
 
@@ -133,8 +134,10 @@ class LinkSuggester {
 			return $result;
 		}
 
-		// Salva in cache solo se la risposta è valida.
+		// Salva in cache prima di aggiungere il flag runtime (non va persistito).
 		$this->cache->set( $cache_key, $result );
+
+		$result['_from_cache'] = false;
 
 		return $result;
 	}
@@ -232,7 +235,7 @@ class LinkSuggester {
 			return $builder;
 		}
 
-		$raw_prefs   = Plugin::get_option( 'model_preferences' );
+		$raw_prefs = Plugin::get_option( 'model_preferences' );
 		/* @var string[] $model_prefs */
 		$model_prefs = ( is_array( $raw_prefs ) && count( $raw_prefs ) > 0 )
 			? array_values( array_map( 'strval', $raw_prefs ) )
@@ -245,7 +248,10 @@ class LinkSuggester {
 			->using_model_preference( ...$model_prefs )
 			->as_json_response( $json_schema );
 
+		// Estende il timeout HTTP per la chiamata AI (evita cURL error 28 su articoli lunghi).
+		add_filter( 'http_request_timeout', [ $this, 'extend_ai_timeout' ], 999 );
 		$raw_json = $builder->generate_text();
+		remove_filter( 'http_request_timeout', [ $this, 'extend_ai_timeout' ], 999 );
 
 		if ( is_wp_error( $raw_json ) ) {
 			return $raw_json;
@@ -320,6 +326,18 @@ class LinkSuggester {
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Estende il timeout HTTP per le chiamate al provider AI.
+	 * Usato come filter callback aggiunto/rimosso intorno a generate_text().
+	 *
+	 * @param int $timeout Timeout corrente in secondi.
+	 * @return int Timeout esteso (almeno ai_request_timeout dall'impostazione).
+	 */
+	public function extend_ai_timeout( int $timeout ): int {
+		$configured = (int) Plugin::get_option( 'ai_request_timeout' );
+		return max( $timeout, $configured );
 	}
 
 	/**

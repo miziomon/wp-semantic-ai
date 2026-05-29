@@ -1,6 +1,7 @@
 /**
  * Modale di anteprima dei suggerimenti AI.
  * Presenta due sezioni (link / enfasi) con selezione individuale e globale.
+ * Mostra il progresso dell'analisi tramite l'array steps.
  */
 
 import { useState, useCallback } from '@wordpress/element';
@@ -16,25 +17,29 @@ import SuggestionRow from './SuggestionRow';
 
 /**
  * @param {Object}    props
- * @param {boolean}   props.isOpen      Visibilità modale.
- * @param {boolean}   props.isLoading   Stato di caricamento.
- * @param {string}    props.error       Messaggio di errore (vuoto = nessun errore).
- * @param {Object[]}  props.links       Suggerimenti link.
- * @param {Object[]}  props.emphasis    Suggerimenti enfasi.
- * @param {Function}  props.onApply     Callback con {links, emphasis} selezionati.
- * @param {Function}  props.onClose     Callback chiusura modale.
+ * @param {boolean}   props.isOpen       Visibilità modale.
+ * @param {Array}     props.steps        Step di progresso [{text, status}].
+ * @param {string}    props.error        Messaggio di errore (vuoto = nessun errore).
+ * @param {Object[]}  props.links        Suggerimenti link.
+ * @param {Object[]}  props.emphasis     Suggerimenti enfasi.
+ * @param {Function}  props.onApply      Callback con {links, emphasis} selezionati.
+ * @param {Function}  props.onClose      Callback chiusura modale.
+ * @param {Function}  props.onReanalyze  Callback per rilanciare l'analisi.
  */
 export default function SuggestionModal( {
 	isOpen,
-	isLoading,
+	steps,
 	error,
 	links,
 	emphasis,
 	onApply,
 	onClose,
+	onReanalyze,
 } ) {
 	const [ selectedLinks, setSelectedLinks ]       = useState( () => new Set( links.map( ( _, i ) => i ) ) );
 	const [ selectedEmphasis, setSelectedEmphasis ] = useState( () => new Set( emphasis.map( ( _, i ) => i ) ) );
+
+	const isLoading = steps.some( ( s ) => s.status === 'loading' );
 
 	const toggleItem = useCallback( ( set, setter, idx, checked ) => {
 		setter( ( prev ) => {
@@ -44,8 +49,7 @@ export default function SuggestionModal( {
 		} );
 	}, [] );
 
-	const selectAll = ( setter, items ) =>
-		setter( new Set( items.map( ( _, i ) => i ) ) );
+	const selectAll   = ( setter, items ) => setter( new Set( items.map( ( _, i ) => i ) ) );
 	const deselectAll = ( setter ) => setter( new Set() );
 
 	const handleApply = () => {
@@ -57,6 +61,14 @@ export default function SuggestionModal( {
 
 	if ( ! isOpen ) return null;
 
+	/** Icona per ogni stato di step. */
+	const stepIcon = ( status ) => {
+		if ( status === 'loading' ) return <Spinner style={ { margin: '0 4px 0 0' } } />;
+		if ( status === 'done' )    return <span style={ { color: '#0a7a0a', marginRight: 6 } }>✓</span>;
+		if ( status === 'error' )   return <span style={ { color: '#a00', marginRight: 6 } }>✗</span>;
+		return null;
+	};
+
 	return (
 		<Modal
 			title={ __( 'Suggerimenti link interni', 'semantic-ai' ) }
@@ -64,10 +76,24 @@ export default function SuggestionModal( {
 			className="sai-modal"
 			size="medium"
 		>
-			{ isLoading && (
-				<div className="sai-modal__loading">
-					<Spinner />
-					<p>{ __( 'Analisi in corso…', 'semantic-ai' ) }</p>
+			{ /* Progress steps */ }
+			{ steps.length > 0 && (
+				<div className="sai-modal__steps" style={ { marginBottom: 16 } }>
+					{ steps.map( ( step, i ) => (
+						<div
+							key={ i }
+							style={ {
+								display: 'flex',
+								alignItems: 'center',
+								padding: '6px 0',
+								borderBottom: i < steps.length - 1 ? '1px solid #f0f0f0' : 'none',
+								color: step.status === 'error' ? '#a00' : 'inherit',
+							} }
+						>
+							{ stepIcon( step.status ) }
+							<span>{ step.text }</span>
+						</div>
+					) ) }
 				</div>
 			) }
 
@@ -77,7 +103,7 @@ export default function SuggestionModal( {
 				</Notice>
 			) }
 
-			{ ! isLoading && ! error && links.length === 0 && emphasis.length === 0 && (
+			{ ! isLoading && ! error && links.length === 0 && emphasis.length === 0 && steps.length > 0 && (
 				<Notice status="info" isDismissible={ false }>
 					{ __( 'Nessun suggerimento trovato per questo articolo.', 'semantic-ai' ) }
 				</Notice>
@@ -142,6 +168,11 @@ export default function SuggestionModal( {
 					<Button variant="secondary" onClick={ onClose }>
 						{ __( 'Annulla', 'semantic-ai' ) }
 					</Button>
+					{ onReanalyze && (
+						<Button variant="secondary" onClick={ onReanalyze }>
+							{ __( 'Rieffettua analisi', 'semantic-ai' ) }
+						</Button>
+					) }
 					{ ! error && ( links.length > 0 || emphasis.length > 0 ) && (
 						<Button variant="primary" onClick={ handleApply }>
 							{ __( 'Applica selezionati', 'semantic-ai' ) }

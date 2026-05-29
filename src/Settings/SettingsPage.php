@@ -1,6 +1,6 @@
 <?php
 /**
- * Pagina delle impostazioni del plugin tramite WordPress Settings API.
+ * Pagina delle impostazioni del plugin tramite WordPress Settings API con sistema di TAB.
  *
  * @package Mavida\SemanticInternalLinks\Settings
  */
@@ -9,20 +9,19 @@ declare( strict_types=1 );
 
 namespace Mavida\SemanticInternalLinks\Settings;
 
+use Mavida\SemanticInternalLinks\Ai\AnalysisLog;
 use Mavida\SemanticInternalLinks\Plugin;
 use Mavida\SemanticInternalLinks\Updater;
 
 /**
- * Registra e renderizza la pagina "Impostazioni → Semantic AI".
+ * Registra e renderizza la pagina "Impostazioni → Semantic AI" con 5 TAB.
  *
- * Parametri configurabili:
- * - max_candidates: numero massimo di post/page inviati come candidati all'AI.
- * - max_links: numero massimo di suggerimenti link per analisi.
- * - max_emphasis: numero massimo di suggerimenti grassetto/corsivo.
- * - chunk_threshold_chars: soglia caratteri oltre la quale chunking dell'articolo.
- * - target_post_types: tipi di post da includere come candidati.
- * - cache_ttl: TTL in secondi della cache transient delle risposte AI.
- * - model_preferences: ordine di preferenza dei modelli AI (array di model ID).
+ * TAB disponibili:
+ * - analysis : parametri di analisi + timeout AI
+ * - models   : preferenze modelli + diagnostica
+ * - prompt   : system instruction personalizzata
+ * - updates  : aggiornamenti automatici
+ * - log      : log delle analisi eseguite
  */
 class SettingsPage {
 
@@ -32,17 +31,17 @@ class SettingsPage {
 	/** Gruppo di opzioni per register_setting. */
 	public const OPTION_GROUP = 'sai_options';
 
-	/** Nome della sezione diagnostica (prima sezione visualizzata). */
+	// Slug interni delle sezioni (usati come "page" in add_settings_section/field).
+	private const TAB_ANALYSIS = 'sai_tab_analysis';
+	private const TAB_MODELS   = 'sai_tab_models';
+	private const TAB_PROMPT   = 'sai_tab_prompt';
+	private const TAB_UPDATES  = 'sai_tab_updates';
+
+	// Nomi sezioni all'interno dei tab.
+	private const SECTION_ANALYSIS    = 'sai_section_analysis';
+	private const SECTION_MODELS      = 'sai_section_models';
 	private const SECTION_DIAGNOSTICS = 'sai_section_diagnostics';
-
-	/** Nome della sezione principale. */
-	private const SECTION_MAIN = 'sai_section_main';
-
-	/** Nome della sezione preferenze modelli. */
-	private const SECTION_MODELS = 'sai_section_models';
-
-	/** Nome della sezione aggiornamenti automatici. */
-	private const SECTION_UPDATES = 'sai_section_updates';
+	private const SECTION_UPDATES     = 'sai_section_updates';
 
 	/**
 	 * Catalogo dei modelli AI disponibili per la selezione.
@@ -50,20 +49,69 @@ class SettingsPage {
 	 * @var array<int, array{id: string, label: string, provider: string}>
 	 */
 	private const MODEL_CATALOG = [
-		[ 'id' => 'claude-opus-4-8',        'label' => 'Claude Opus 4.8',        'provider' => 'Anthropic' ],
-		[ 'id' => 'claude-sonnet-4-6',       'label' => 'Claude Sonnet 4.6',      'provider' => 'Anthropic' ],
-		[ 'id' => 'claude-haiku-4-5',        'label' => 'Claude Haiku 4.5',       'provider' => 'Anthropic' ],
-		[ 'id' => 'gemini-3.5-flash',        'label' => 'Gemini 3.5 Flash',       'provider' => 'Google'    ],
-		[ 'id' => 'gemini-3.1-pro-preview',  'label' => 'Gemini 3.1 Pro Preview', 'provider' => 'Google'    ],
-		[ 'id' => 'gemini-2.5-pro',          'label' => 'Gemini 2.5 Pro',         'provider' => 'Google'    ],
-		[ 'id' => 'gemini-2.5-flash',        'label' => 'Gemini 2.5 Flash',       'provider' => 'Google'    ],
-		[ 'id' => 'gpt-4.1',                 'label' => 'GPT-4.1',                'provider' => 'OpenAI'    ],
-		[ 'id' => 'gpt-4.1-mini',            'label' => 'GPT-4.1 mini',           'provider' => 'OpenAI'    ],
-		[ 'id' => 'gpt-4o',                  'label' => 'GPT-4o',                 'provider' => 'OpenAI'    ],
+		[
+			'id'       => 'claude-opus-4-8',
+			'label'    => 'Claude Opus 4.8',
+			'provider' => 'Anthropic',
+		],
+		[
+			'id'       => 'claude-sonnet-4-6',
+			'label'    => 'Claude Sonnet 4.6',
+			'provider' => 'Anthropic',
+		],
+		[
+			'id'       => 'claude-haiku-4-5',
+			'label'    => 'Claude Haiku 4.5',
+			'provider' => 'Anthropic',
+		],
+		[
+			'id'       => 'gemini-3.5-flash',
+			'label'    => 'Gemini 3.5 Flash',
+			'provider' => 'Google',
+		],
+		[
+			'id'       => 'gemini-3.1-pro-preview',
+			'label'    => 'Gemini 3.1 Pro Preview',
+			'provider' => 'Google',
+		],
+		[
+			'id'       => 'gemini-2.5-pro',
+			'label'    => 'Gemini 2.5 Pro',
+			'provider' => 'Google',
+		],
+		[
+			'id'       => 'gemini-2.5-flash',
+			'label'    => 'Gemini 2.5 Flash',
+			'provider' => 'Google',
+		],
+		[
+			'id'       => 'gpt-4.1',
+			'label'    => 'GPT-4.1',
+			'provider' => 'OpenAI',
+		],
+		[
+			'id'       => 'gpt-4.1-mini',
+			'label'    => 'GPT-4.1 mini',
+			'provider' => 'OpenAI',
+		],
+		[
+			'id'       => 'gpt-4o',
+			'label'    => 'GPT-4o',
+			'provider' => 'OpenAI',
+		],
 	];
 
 	/** Preferenze di default se l'opzione non è ancora stata salvata. */
 	private const DEFAULT_MODEL_PREFERENCES = [ 'claude-sonnet-4-6', 'gemini-3.5-flash', 'gpt-4.1' ];
+
+	/** Tab validi con le relative etichette. */
+	private const TABS = [
+		'analysis' => 'Analisi',
+		'models'   => 'Modelli AI',
+		'prompt'   => 'Prompt',
+		'updates'  => 'Aggiornamenti',
+		'log'      => 'Log analisi',
+	];
 
 	/** Registra la voce di menu e la pagina impostazioni. */
 	public function register(): void {
@@ -76,115 +124,140 @@ class SettingsPage {
 		);
 
 		add_action( 'admin_init', [ $this, 'register_settings' ] );
-		add_action( 'admin_footer-settings_page_' . self::MENU_SLUG, [ $this, 'render_model_prefs_script' ] );
+		add_action( 'admin_footer-settings_page_' . self::MENU_SLUG, [ $this, 'render_admin_scripts' ] );
 	}
 
 	/** Registra le opzioni, le sezioni e i campi tramite Settings API. */
 	public function register_settings(): void {
 		$this->register_all_settings();
 
+		// TAB Analisi.
 		add_settings_section(
-			self::SECTION_MAIN,
+			self::SECTION_ANALYSIS,
 			__( 'Parametri di analisi', 'semantic-ai' ),
-			[ $this, 'render_section_description' ],
-			self::MENU_SLUG
+			[ $this, 'render_section_analysis_desc' ],
+			self::TAB_ANALYSIS
 		);
 
+		// TAB Modelli AI (2 sezioni unite).
 		add_settings_section(
 			self::SECTION_MODELS,
 			__( 'Preferenze modelli AI', 'semantic-ai' ),
-			[ $this, 'render_section_models_description' ],
-			self::MENU_SLUG
+			[ $this, 'render_section_models_desc' ],
+			self::TAB_MODELS
 		);
 
 		add_settings_section(
 			self::SECTION_DIAGNOSTICS,
 			__( 'Diagnostica', 'semantic-ai' ),
-			[ $this, 'render_section_diagnostics_description' ],
-			self::MENU_SLUG
+			[ $this, 'render_section_diagnostics_desc' ],
+			self::TAB_MODELS
 		);
 
+		// TAB Aggiornamenti.
 		add_settings_section(
 			self::SECTION_UPDATES,
 			__( 'Aggiornamenti automatici', 'semantic-ai' ),
-			[ $this, 'render_section_updates_description' ],
-			self::MENU_SLUG
+			[ $this, 'render_section_updates_desc' ],
+			self::TAB_UPDATES
 		);
 
 		$this->add_all_fields();
 	}
 
-	/** Renderizza la pagina di impostazioni. */
+	/** Renderizza la pagina di impostazioni con il sistema di TAB. */
 	public function render_page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
+
+		$raw_tab    = isset( $_GET['tab'] ) ? sanitize_key( (string) $_GET['tab'] ) : 'analysis'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$active_tab = array_key_exists( $raw_tab, self::TABS ) ? $raw_tab : 'analysis';
 		?>
 		<div class="wrap">
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
-			<form method="post" action="options.php">
+
+			<nav class="nav-tab-wrapper" style="margin-bottom:0;">
+				<?php foreach ( self::TABS as $slug => $label ) : ?>
+					<a href="<?php echo esc_url( admin_url( 'options-general.php?page=' . self::MENU_SLUG . '&tab=' . $slug ) ); ?>"
+						class="nav-tab<?php echo $active_tab === $slug ? ' nav-tab-active' : ''; ?>">
+						<?php echo esc_html__( $label, 'semantic-ai' ); // phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText ?>
+					</a>
+				<?php endforeach; ?>
+			</nav>
+
+			<?php if ( 'log' !== $active_tab ) : ?>
+			<form method="post" action="options.php" style="margin-top:20px;">
 				<?php
 				settings_fields( self::OPTION_GROUP );
-				do_settings_sections( self::MENU_SLUG );
+
+				$tab_page_map = [
+					'analysis' => self::TAB_ANALYSIS,
+					'models'   => self::TAB_MODELS,
+					'prompt'   => self::TAB_PROMPT,
+					'updates'  => self::TAB_UPDATES,
+				];
+
+				$page_slug = $tab_page_map[ $active_tab ];
+				do_settings_sections( $page_slug );
+
+				if ( 'prompt' === $active_tab ) {
+					$this->render_prompt_tab_extra();
+				}
+
 				submit_button( __( 'Salva impostazioni', 'semantic-ai' ) );
 				?>
 			</form>
+			<?php else : ?>
+				<div style="margin-top:20px;">
+					<?php $this->render_log_tab(); ?>
+				</div>
+			<?php endif; ?>
 		</div>
 		<?php
 	}
 
-	/** Renderizza la descrizione della sezione principale. */
-	public function render_section_description(): void {
-		echo '<p>' . esc_html__(
-			'Configura il comportamento del plugin per la generazione di suggerimenti AI.',
-			'semantic-ai'
-		) . '</p>';
+	// ──────────────────────────────────────────────────────────────────────────
+	// Descrizioni di sezione
+	// ──────────────────────────────────────────────────────────────────────────
+
+	/** Renderizza la descrizione della sezione Analisi. */
+	public function render_section_analysis_desc(): void {
+		echo '<p>' . esc_html__( 'Configura il comportamento del plugin per la generazione di suggerimenti AI.', 'semantic-ai' ) . '</p>';
 	}
 
-	/** Renderizza la descrizione della sezione diagnostica. */
-	public function render_section_diagnostics_description(): void {
-		echo '<p>' . esc_html__(
-			'Verifica che il provider AI configurato in WordPress risponda correttamente.',
-			'semantic-ai'
-		) . '</p>';
+	/** Renderizza la descrizione della sezione Modelli AI. */
+	public function render_section_models_desc(): void {
+		echo '<p>' . esc_html__( 'Il WP AI Client usa il primo modello nell\'elenco supportato dal provider configurato. Sposta i modelli con ▲/▼ per cambiare la priorità.', 'semantic-ai' ) . '</p>';
 	}
 
-	/** Renderizza il pulsante di test della connessione AI. */
-	public function render_test_connection_field(): void {
-		$nonce = wp_create_nonce( 'sai_test_ai' );
-
-		printf(
-			'<button type="button" id="sai-test-btn" class="button" data-nonce="%s">%s</button>'
-			. '<span id="sai-test-result" style="margin-left:10px;display:none;"></span>',
-			esc_attr( $nonce ),
-			esc_html__( 'Testa connessione AI', 'semantic-ai' )
-		);
-
-		echo '<p class="description">' . esc_html__(
-			'Invia una richiesta minimale al provider AI configurato (usa i modelli nell\'ordine di preferenza impostato sopra) e mostra l\'esito in tempo reale.',
-			'semantic-ai'
-		) . '</p>';
+	/** Renderizza la descrizione della sezione Diagnostica. */
+	public function render_section_diagnostics_desc(): void {
+		echo '<p>' . esc_html__( 'Verifica che il provider AI configurato in WordPress risponda correttamente.', 'semantic-ai' ) . '</p>';
 	}
 
-	/** Renderizza la descrizione della sezione modelli AI. */
-	public function render_section_models_description(): void {
-		echo '<p>' . esc_html__(
-			'Il WP AI Client usa il primo modello nell\'elenco supportato dal provider configurato. Sposta i modelli con ▲/▼ per cambiare la priorità.',
-			'semantic-ai'
-		) . '</p>';
+	/** Renderizza la descrizione della sezione Aggiornamenti. */
+	public function render_section_updates_desc(): void {
+		echo '<p>' . esc_html__( 'Configura con quale frequenza il plugin interroga GitHub per nuovi aggiornamenti.', 'semantic-ai' ) . '</p>';
 	}
+
+	// ──────────────────────────────────────────────────────────────────────────
+	// Registrazione opzioni e campi
+	// ──────────────────────────────────────────────────────────────────────────
 
 	/** Registra tutte le opzioni del plugin con i relativi sanitize callback. */
 	private function register_all_settings(): void {
 		$options = [
-			'sai_max_candidates'        => [ $this, 'sanitize_positive_int' ],
-			'sai_max_links'             => [ $this, 'sanitize_positive_int' ],
-			'sai_max_emphasis'          => [ $this, 'sanitize_positive_int' ],
-			'sai_chunk_threshold_chars' => [ $this, 'sanitize_positive_int' ],
-			'sai_target_post_types'     => [ $this, 'sanitize_post_types' ],
-			'sai_cache_ttl'             => [ $this, 'sanitize_positive_int' ],
-			'sai_model_preferences'     => [ $this, 'sanitize_model_preferences' ],
-			'sai_update_check_interval' => [ $this, 'sanitize_positive_int' ],
+			'sai_max_candidates'            => [ $this, 'sanitize_positive_int' ],
+			'sai_max_links'                 => [ $this, 'sanitize_positive_int' ],
+			'sai_max_emphasis'              => [ $this, 'sanitize_positive_int' ],
+			'sai_chunk_threshold_chars'     => [ $this, 'sanitize_positive_int' ],
+			'sai_target_post_types'         => [ $this, 'sanitize_post_types' ],
+			'sai_cache_ttl'                 => [ $this, 'sanitize_positive_int' ],
+			'sai_ai_request_timeout'        => [ $this, 'sanitize_positive_int' ],
+			'sai_model_preferences'         => [ $this, 'sanitize_model_preferences' ],
+			'sai_update_check_interval'     => [ $this, 'sanitize_positive_int' ],
+			'sai_custom_system_instruction' => 'sanitize_textarea_field',
 		];
 
 		foreach ( $options as $option_name => $sanitize_callback ) {
@@ -198,15 +271,8 @@ class SettingsPage {
 
 	/** Aggiunge tutti i campi della pagina impostazioni. */
 	private function add_all_fields(): void {
-		add_settings_field(
-			'sai_test_connection',
-			__( 'Connessione AI', 'semantic-ai' ),
-			[ $this, 'render_test_connection_field' ],
-			self::MENU_SLUG,
-			self::SECTION_DIAGNOSTICS
-		);
-
-		$main_fields = [
+		// ── TAB Analisi ──────────────────────────────────────────────────────
+		$analysis_fields = [
 			[
 				'id'       => 'sai_max_candidates',
 				'label'    => __( 'Max candidati', 'semantic-ai' ),
@@ -277,32 +343,54 @@ class SettingsPage {
 					'description' => __( 'Durata della cache delle risposte AI in secondi (min 300, max 604.800 = 7 giorni).', 'semantic-ai' ),
 				],
 			],
+			[
+				'id'       => 'sai_ai_request_timeout',
+				'label'    => __( 'Timeout AI (secondi)', 'semantic-ai' ),
+				'callback' => 'render_number_field',
+				'args'     => [
+					'option'      => 'sai_ai_request_timeout',
+					'default'     => 120,
+					'min'         => 30,
+					'max'         => 300,
+					'description' => __( 'Timeout massimo per la chiamata HTTP al provider AI (30–300 secondi). Aumentare se si verificano errori di timeout su articoli lunghi.', 'semantic-ai' ),
+				],
+			],
 		];
 
-		foreach ( $main_fields as $field ) {
+		foreach ( $analysis_fields as $field ) {
 			add_settings_field(
 				$field['id'],
 				$field['label'],
 				[ $this, $field['callback'] ],
-				self::MENU_SLUG,
-				self::SECTION_MAIN,
+				self::TAB_ANALYSIS,
+				self::SECTION_ANALYSIS,
 				$field['args']
 			);
 		}
 
+		// ── TAB Modelli AI ───────────────────────────────────────────────────
 		add_settings_field(
 			'sai_model_preferences',
 			__( 'Ordine di preferenza', 'semantic-ai' ),
 			[ $this, 'render_model_preferences_field' ],
-			self::MENU_SLUG,
+			self::TAB_MODELS,
 			self::SECTION_MODELS
 		);
 
 		add_settings_field(
+			'sai_test_connection',
+			__( 'Connessione AI', 'semantic-ai' ),
+			[ $this, 'render_test_connection_field' ],
+			self::TAB_MODELS,
+			self::SECTION_DIAGNOSTICS
+		);
+
+		// ── TAB Aggiornamenti ────────────────────────────────────────────────
+		add_settings_field(
 			'sai_update_check_interval',
 			__( 'Intervallo verifica (ore)', 'semantic-ai' ),
 			[ $this, 'render_update_interval_field' ],
-			self::MENU_SLUG,
+			self::TAB_UPDATES,
 			self::SECTION_UPDATES
 		);
 
@@ -310,10 +398,14 @@ class SettingsPage {
 			'sai_force_update_check',
 			__( 'Forza verifica ora', 'semantic-ai' ),
 			[ $this, 'render_force_check_field' ],
-			self::MENU_SLUG,
+			self::TAB_UPDATES,
 			self::SECTION_UPDATES
 		);
 	}
+
+	// ──────────────────────────────────────────────────────────────────────────
+	// Renderer campi
+	// ──────────────────────────────────────────────────────────────────────────
 
 	/**
 	 * Renderizza un campo numerico.
@@ -372,65 +464,6 @@ class SettingsPage {
 		}
 	}
 
-	/** Renderizza la descrizione della sezione aggiornamenti automatici. */
-	public function render_section_updates_description(): void {
-		echo '<p>' . esc_html__(
-			'Configura con quale frequenza il plugin interroga GitHub per nuovi aggiornamenti.',
-			'semantic-ai'
-		) . '</p>';
-	}
-
-	/** Renderizza il campo dell\'intervallo di verifica aggiornamenti. */
-	public function render_update_interval_field(): void {
-		$value = (int) Plugin::get_option( 'update_check_interval' );
-		$value = max( 1, min( 24, $value ) );
-
-		printf(
-			'<input type="number" name="sai_update_check_interval" id="sai_update_check_interval" value="%s" min="1" max="24" class="small-text" /> %s',
-			esc_attr( (string) $value ),
-			esc_html__( 'ore', 'semantic-ai' )
-		);
-
-		echo '<p class="description">' . esc_html__(
-			'Ogni quante ore il plugin interroga GitHub per nuovi aggiornamenti (1–24). Modificare questa impostazione svuota la cache corrente.',
-			'semantic-ai'
-		) . '</p>';
-	}
-
-	/** Renderizza il pulsante di verifica forzata degli aggiornamenti. */
-	public function render_force_check_field(): void {
-		$nonce_url = wp_nonce_url(
-			admin_url( 'admin-post.php?action=sai_force_update_check' ),
-			'sai_force_update_check'
-		);
-
-		$cached = Updater::get_cached_release();
-		$gh_ver = is_array( $cached ) ? ltrim( (string) ( $cached['tag_name'] ?? '?' ), 'v' ) : null;
-
-		if ( is_null( $gh_ver ) ) {
-			$status = __( 'Cache non presente — verrà interrogata GitHub alla prossima verifica.', 'semantic-ai' );
-		} else {
-			$status = sprintf(
-				/* translators: 1: versione installata, 2: versione in cache da GitHub */
-				__( 'Installata: %1$s · GitHub (in cache): %2$s', 'semantic-ai' ),
-				SAI_VERSION,
-				$gh_ver
-			);
-		}
-
-		printf(
-			'<a href="%s" class="button">%s</a><span class="description" style="margin-left:10px;">%s</span>',
-			esc_url( $nonce_url ),
-			esc_html__( 'Forza verifica aggiornamenti', 'semantic-ai' ),
-			esc_html( $status )
-		);
-
-		echo '<p class="description" style="margin-top:6px;">' . esc_html__(
-			'Svuota la cache GitHub e apre la pagina Aggiornamenti di WordPress con verifica forzata.',
-			'semantic-ai'
-		) . '</p>';
-	}
-
 	/** Renderizza il campo di ordinamento dei modelli AI. */
 	public function render_model_preferences_field(): void {
 		$raw_saved   = Plugin::get_option( 'model_preferences' );
@@ -451,9 +484,7 @@ class SettingsPage {
 
 		if ( empty( $active_models ) ) {
 			foreach ( self::DEFAULT_MODEL_PREFERENCES as $model_id ) {
-				if ( isset( $catalog_by_id[ $model_id ] ) ) {
-					$active_models[] = $catalog_by_id[ $model_id ];
-				}
+				$active_models[] = $catalog_by_id[ $model_id ];
 			}
 		}
 
@@ -477,7 +508,7 @@ class SettingsPage {
 				. '</li>',
 				esc_attr( $model['id'] ),
 				esc_attr( $model['provider'] ),
-				$i + 1,
+				absint( $i ) + 1,
 				esc_html( $model['label'] ),
 				esc_html( $model['provider'] ),
 				esc_attr( $model['id'] ),
@@ -488,7 +519,6 @@ class SettingsPage {
 		}
 
 		echo '</ul>';
-
 		echo '<p style="margin-top:12px;display:flex;align-items:center;gap:8px;">';
 		echo '<select id="sai-model-add-select">';
 		echo '<option value="">' . esc_html__( '— scegli modello —', 'semantic-ai' ) . '</option>';
@@ -525,45 +555,270 @@ class SettingsPage {
 		);
 
 		echo '<p class="description">' . esc_html__(
-			'Il WP AI Client prova i modelli in quest\'ordine e usa il primo supportato dal provider configurato. Aggiungi o rimuovi modelli liberamente.',
+			'Il WP AI Client prova i modelli in quest\'ordine e usa il primo supportato dal provider configurato.',
 			'semantic-ai'
 		) . '</p>';
 
 		echo '</div>';
 	}
 
-	/** Renderizza lo script JS per la gestione dell'ordinamento modelli. */
-	public function render_model_prefs_script(): void {
+	/** Renderizza il pulsante di test della connessione AI. */
+	public function render_test_connection_field(): void {
+		$nonce = wp_create_nonce( 'sai_test_ai' );
+
+		printf(
+			'<button type="button" id="sai-test-btn" class="button" data-nonce="%s">%s</button>'
+			. '<span id="sai-test-result" style="margin-left:10px;display:none;"></span>',
+			esc_attr( $nonce ),
+			esc_html__( 'Testa connessione AI', 'semantic-ai' )
+		);
+
+		echo '<p class="description">' . esc_html__(
+			'Invia una richiesta minimale al provider AI configurato e mostra l\'esito in tempo reale.',
+			'semantic-ai'
+		) . '</p>';
+	}
+
+	/** Renderizza il campo dell\'intervallo di verifica aggiornamenti. */
+	public function render_update_interval_field(): void {
+		$value = (int) Plugin::get_option( 'update_check_interval' );
+		$value = max( 1, min( 24, $value ) );
+
+		printf(
+			'<input type="number" name="sai_update_check_interval" id="sai_update_check_interval" value="%s" min="1" max="24" class="small-text" /> %s',
+			esc_attr( (string) $value ),
+			esc_html__( 'ore', 'semantic-ai' )
+		);
+
+		echo '<p class="description">' . esc_html__(
+			'Ogni quante ore il plugin interroga GitHub per nuovi aggiornamenti (1–24). Modificare questa impostazione svuota la cache corrente.',
+			'semantic-ai'
+		) . '</p>';
+	}
+
+	/** Renderizza il pulsante di verifica forzata degli aggiornamenti. */
+	public function render_force_check_field(): void {
+		$nonce_url = wp_nonce_url(
+			admin_url( 'admin-post.php?action=sai_force_update_check' ),
+			'sai_force_update_check'
+		);
+
+		$cached = Updater::get_cached_release();
+		$gh_ver = is_array( $cached ) ? ltrim( (string) ( $cached['tag_name'] ?? '?' ), 'v' ) : null;
+
+		$status = is_null( $gh_ver )
+			? __( 'Cache non presente — verrà interrogata GitHub alla prossima verifica.', 'semantic-ai' )
+			: sprintf(
+				/* translators: 1: versione installata, 2: versione in cache da GitHub */
+				__( 'Installata: %1$s · GitHub (in cache): %2$s', 'semantic-ai' ),
+				SAI_VERSION,
+				$gh_ver
+			);
+
+		printf(
+			'<a href="%s" class="button">%s</a><span class="description" style="margin-left:10px;">%s</span>',
+			esc_url( $nonce_url ),
+			esc_html__( 'Forza verifica aggiornamenti', 'semantic-ai' ),
+			esc_html( $status )
+		);
+
+		echo '<p class="description" style="margin-top:6px;">' . esc_html__(
+			'Svuota la cache GitHub e apre la pagina Aggiornamenti di WordPress con verifica forzata.',
+			'semantic-ai'
+		) . '</p>';
+	}
+
+	/** Renderizza i campi extra del TAB Prompt (fuori dalle sezioni Settings API). */
+	private function render_prompt_tab_extra(): void {
+		$value = (string) get_option( 'sai_custom_system_instruction', '' );
+		$nonce = wp_create_nonce( 'sai_reset_instruction' );
+		?>
+		<h2><?php esc_html_e( 'System instruction personalizzata', 'semantic-ai' ); ?></h2>
+		<table class="form-table" role="presentation">
+			<tr>
+				<th scope="row">
+					<label for="sai_custom_system_instruction">
+						<?php esc_html_e( 'Istruzione di sistema', 'semantic-ai' ); ?>
+					</label>
+				</th>
+				<td>
+					<textarea name="sai_custom_system_instruction"
+								id="sai_custom_system_instruction"
+								rows="14"
+								cols="80"
+								class="large-text"
+								style="font-family:monospace;font-size:12px;"><?php echo esc_textarea( $value ); ?></textarea>
+					<p class="description">
+						<?php esc_html_e( 'Lascia vuoto per usare l\'instruction predefinita del plugin. Placeholder supportati: {language}, {max_links}, {max_emphasis}.', 'semantic-ai' ); ?>
+					</p>
+					<p>
+						<button type="button"
+								id="sai-reset-instruction-btn"
+								class="button"
+								data-nonce="<?php echo esc_attr( $nonce ); ?>">
+							<?php esc_html_e( 'Ripristina predefinita', 'semantic-ai' ); ?>
+						</button>
+						<span id="sai-reset-result" style="margin-left:8px;display:none;color:#0a7a0a;"></span>
+					</p>
+					<details style="margin-top:12px;">
+						<summary style="cursor:pointer;color:#2271b1;">
+							<?php esc_html_e( 'Mostra instruction predefinita', 'semantic-ai' ); ?>
+						</summary>
+						<pre style="background:#f6f6f6;padding:12px;margin-top:8px;font-size:11px;overflow:auto;max-height:300px;border:1px solid #ddd;"><?php echo esc_html( $this->get_default_instruction_text() ); ?></pre>
+					</details>
+				</td>
+			</tr>
+		</table>
+		<?php
+	}
+
+	/** Renderizza il TAB Log analisi. */
+	private function render_log_tab(): void {
+		$log          = new AnalysisLog();
+		$entries      = $log->get_entries();
+		$clear_nonce  = wp_create_nonce( 'sai_clear_log' );
+		$result_nonce = wp_create_nonce( 'sai_get_log_result' );
+		?>
+		<h2><?php esc_html_e( 'Log analisi', 'semantic-ai' ); ?></h2>
+		<p><?php esc_html_e( 'Storico delle analisi AI eseguite. Vengono conservate le ultime 50 voci.', 'semantic-ai' ); ?></p>
+		<p>
+			<button type="button" id="sai-clear-log-btn" class="button"
+					data-nonce="<?php echo esc_attr( $clear_nonce ); ?>">
+				<?php esc_html_e( 'Svuota log', 'semantic-ai' ); ?>
+			</button>
+		</p>
+
+		<?php if ( empty( $entries ) ) : ?>
+			<p><?php esc_html_e( 'Nessuna analisi registrata. Esegui un\'analisi da Gutenberg per vedere i risultati qui.', 'semantic-ai' ); ?></p>
+		<?php else : ?>
+			<table class="widefat striped" style="margin-top:12px;">
+				<thead>
+					<tr>
+						<th><?php esc_html_e( 'Data', 'semantic-ai' ); ?></th>
+						<th><?php esc_html_e( 'Post', 'semantic-ai' ); ?></th>
+						<th style="text-align:center;"><?php esc_html_e( 'Candidati', 'semantic-ai' ); ?></th>
+						<th style="text-align:center;"><?php esc_html_e( 'Link', 'semantic-ai' ); ?></th>
+						<th style="text-align:center;"><?php esc_html_e( 'Enfasi', 'semantic-ai' ); ?></th>
+						<th style="text-align:center;"><?php esc_html_e( 'Cache', 'semantic-ai' ); ?></th>
+						<th></th>
+					</tr>
+				</thead>
+				<tbody>
+				<?php
+				foreach ( $entries as $entry ) :
+					/* @var array<string, mixed> $entry */
+					$entry_id      = (string) ( $entry['id'] ?? '' );
+					$post_title    = (string) ( $entry['post_title'] ?? '' );
+					$post_id_entry = (int) ( $entry['post_id'] ?? 0 );
+					$timestamp     = (string) ( $entry['timestamp'] ?? '' );
+					$links_count   = (int) ( $entry['links_count'] ?? 0 );
+					$emph_count    = (int) ( $entry['emphasis_count'] ?? 0 );
+					$cand_count    = (int) ( $entry['candidate_count'] ?? 0 );
+					$from_cache    = (bool) ( $entry['from_cache'] ?? false );
+					$raw_edit_link = $post_id_entry > 0 ? get_edit_post_link( $post_id_entry ) : null;
+					$edit_link     = is_string( $raw_edit_link ) ? $raw_edit_link : '';
+					?>
+					<tr>
+						<td><?php echo esc_html( $timestamp ); ?></td>
+						<td>
+							<?php if ( '' !== $edit_link ) : ?>
+								<a href="<?php echo esc_url( $edit_link ); ?>"><?php echo esc_html( $post_title ); ?></a>
+							<?php else : ?>
+								<?php echo esc_html( $post_title ); ?>
+							<?php endif; ?>
+						</td>
+						<td style="text-align:center;"><?php echo absint( $cand_count ); ?></td>
+						<td style="text-align:center;"><?php echo absint( $links_count ); ?></td>
+						<td style="text-align:center;"><?php echo absint( $emph_count ); ?></td>
+						<td style="text-align:center;">
+							<?php echo $from_cache ? esc_html__( 'Sì', 'semantic-ai' ) : esc_html__( 'No', 'semantic-ai' ); ?>
+						</td>
+						<td>
+							<button type="button"
+									class="button button-small sai-view-result"
+									data-id="<?php echo esc_attr( $entry_id ); ?>"
+									data-nonce="<?php echo esc_attr( $result_nonce ); ?>">
+								<?php esc_html_e( 'Visualizza', 'semantic-ai' ); ?>
+							</button>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+		<?php endif; ?>
+
+		<!-- Modal inline per il risultato dell'analisi -->
+		<div id="sai-log-modal"
+			style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:99999;">
+			<div style="background:#fff;max-width:720px;margin:60px auto;padding:24px;max-height:80vh;overflow-y:auto;border-radius:4px;box-shadow:0 4px 24px rgba(0,0,0,.3);">
+				<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+					<h2 style="margin:0;"><?php esc_html_e( 'Dettaglio analisi', 'semantic-ai' ); ?></h2>
+					<button type="button" id="sai-log-modal-close" class="button">
+						<?php esc_html_e( 'Chiudi', 'semantic-ai' ); ?>
+					</button>
+				</div>
+				<div id="sai-log-result-content"></div>
+			</div>
+		</div>
+		<?php
+	}
+
+	/** Restituisce il testo dell'instruction predefinita per il pannello "Mostra predefinita". */
+	private function get_default_instruction_text(): string {
+		$max_links    = (int) Plugin::get_option( 'max_links' );
+		$max_emphasis = (int) Plugin::get_option( 'max_emphasis' );
+
+		return "Sei un esperto SEO specializzato in internal linking e leggibilità dei contenuti web.\n"
+			. "Analizzi l'articolo fornito e suggerisci link interni e enfasi semantica per migliorare la SEO on-page.\n\n"
+			. "LINGUA: Tutti i suggerimenti devono essere nella stessa lingua dell'articolo.\n\n"
+			. "REGOLE PER I LINK INTERNI:\n"
+			. "- Puoi linkare SOLO ai targetId presenti nella lista candidati fornita.\n"
+			. "- Le ancore devono essere TESTO GIÀ PRESENTE nel blocco indicato (verbatim).\n"
+			. "- Le ancore devono essere descrittive e ricche di keyword.\n"
+			. "- Massimo 1 link ogni 100-150 parole nell'articolo.\n"
+			. "- Non linkare più volte allo stesso targetId.\n"
+			. "- Proponi al massimo {$max_links} link in totale.\n\n"
+			. "REGOLE PER L'ENFASI:\n"
+			. "- Usa grassetto (bold) o corsivo (italic) solo su keyword o frasi davvero portanti.\n"
+			. "- Non enfatizzare frasi già all'interno di un link.\n"
+			. "- Massimo {$max_emphasis} elementi in totale.\n\n"
+			. 'OUTPUT: Restituisci SOLO JSON conforme allo schema, senza testo extra.';
+	}
+
+	// ──────────────────────────────────────────────────────────────────────────
+	// Script JS admin (iniettati nell'admin footer della pagina)
+	// ──────────────────────────────────────────────────────────────────────────
+
+	/** Inietta gli script JS necessari per tutti i widget interattivi della pagina. */
+	public function render_admin_scripts(): void {
 		?>
 		<script>
 		(function () {
-			var list   = document.getElementById('sai-model-list');
-			var hidden = document.getElementById('sai-model-prefs-hidden');
-			var sel    = document.getElementById('sai-model-add-select');
-			var addBtn = document.getElementById('sai-add-model-btn');
 
-			if (!list || !hidden || !sel || !addBtn) { return; }
+		// ── Ordinamento modelli ───────────────────────────────────────────────
+		var list   = document.getElementById('sai-model-list');
+		var hidden = document.getElementById('sai-model-prefs-hidden');
+		var sel    = document.getElementById('sai-model-add-select');
+		var addBtn = document.getElementById('sai-add-model-btn');
 
+		if (list && hidden && sel && addBtn) {
 			function updatePositions() {
 				list.querySelectorAll('.sai-model-item').forEach(function (item, i) {
 					item.querySelector('.sai-pos').textContent = (i + 1) + '.';
 				});
 			}
-
-			function sync() {
+			function syncModels() {
 				var ids = [];
 				list.querySelectorAll('.sai-model-item').forEach(function (item) {
 					ids.push(item.dataset.modelId);
 				});
 				hidden.value = JSON.stringify(ids);
 			}
-
 			list.addEventListener('click', function (e) {
 				var btn  = e.target.closest('button');
 				if (!btn) { return; }
 				var item = btn.closest('.sai-model-item');
 				if (!item) { return; }
-
 				if (btn.classList.contains('sai-move-up')) {
 					var prev = item.previousElementSibling;
 					if (prev) { list.insertBefore(item, prev); }
@@ -573,126 +828,171 @@ class SettingsPage {
 				} else if (btn.classList.contains('sai-remove')) {
 					item.remove();
 				}
-
-				updatePositions();
-				sync();
+				updatePositions(); syncModels();
 			});
-
 			addBtn.addEventListener('click', function () {
 				var opt      = sel.options[sel.selectedIndex];
 				var modelId  = opt.value;
 				if (!modelId) { return; }
 				if (list.querySelector('[data-model-id="' + modelId + '"]')) { return; }
-
 				var label    = opt.dataset.label    || opt.text;
 				var provider = opt.dataset.provider || '';
 				var count    = list.querySelectorAll('.sai-model-item').length;
-
 				var li = document.createElement('li');
-				li.className           = 'sai-model-item';
-				li.dataset.modelId     = modelId;
-				li.dataset.provider    = provider;
-				li.style.cssText       = 'display:flex;align-items:center;gap:8px;padding:6px 10px;background:#fff;border:1px solid #ddd;margin-bottom:4px;border-radius:3px;';
-
-				var pos  = document.createElement('span');
-				pos.className   = 'sai-pos';
-				pos.style.cssText = 'color:#888;min-width:24px;font-weight:600';
-				pos.textContent = (count + 1) + '.';
-
-				var strong = document.createElement('strong');
-				strong.textContent = label;
-
-				var prov = document.createElement('span');
-				prov.style.cssText = 'color:#888;font-size:12px';
-				prov.textContent   = provider ? '(' + provider + ')' : '';
-
-				var code = document.createElement('code');
-				code.style.cssText = 'color:#555;font-size:11px;background:#f6f6f6;padding:1px 4px;border-radius:2px';
-				code.textContent   = modelId;
-
-				var spacer = document.createElement('span');
-				spacer.style.flex = '1';
-
-				var btnUp   = document.createElement('button');
-				btnUp.type  = 'button';
-				btnUp.className = 'button button-small sai-move-up';
-				btnUp.title = '↑ Sposta su';
-				btnUp.innerHTML = '&#9650;';
-
-				var btnDn   = document.createElement('button');
-				btnDn.type  = 'button';
-				btnDn.className = 'button button-small sai-move-down';
-				btnDn.title = '↓ Sposta giù';
-				btnDn.style.marginLeft = '2px';
-				btnDn.innerHTML = '&#9660;';
-
-				var btnRm   = document.createElement('button');
-				btnRm.type  = 'button';
-				btnRm.className = 'button button-small sai-remove';
-				btnRm.title = 'Rimuovi';
-				btnRm.style.cssText = 'margin-left:6px;color:#a00';
-				btnRm.innerHTML = '&#10005;';
-
-				li.appendChild(pos);
-				li.appendChild(strong);
-				li.appendChild(prov);
-				li.appendChild(code);
-				li.appendChild(spacer);
-				li.appendChild(btnUp);
-				li.appendChild(btnDn);
-				li.appendChild(btnRm);
-
+				li.className       = 'sai-model-item';
+				li.dataset.modelId = modelId;
+				li.style.cssText   = 'display:flex;align-items:center;gap:8px;padding:6px 10px;background:#fff;border:1px solid #ddd;margin-bottom:4px;border-radius:3px;';
+				var pos = document.createElement('span'); pos.className = 'sai-pos'; pos.style.cssText = 'color:#888;min-width:24px;font-weight:600'; pos.textContent = (count+1)+'.';
+				var strong = document.createElement('strong'); strong.textContent = label;
+				var prov = document.createElement('span'); prov.style.cssText='color:#888;font-size:12px'; prov.textContent = provider ? '('+provider+')' : '';
+				var code = document.createElement('code'); code.style.cssText='color:#555;font-size:11px;background:#f6f6f6;padding:1px 4px;border-radius:2px'; code.textContent = modelId;
+				var spacer = document.createElement('span'); spacer.style.flex='1';
+				var bUp = document.createElement('button'); bUp.type='button'; bUp.className='button button-small sai-move-up'; bUp.title='Sposta su'; bUp.innerHTML='&#9650;';
+				var bDn = document.createElement('button'); bDn.type='button'; bDn.className='button button-small sai-move-down'; bDn.style.marginLeft='2px'; bDn.title='Sposta giù'; bDn.innerHTML='&#9660;';
+				var bRm = document.createElement('button'); bRm.type='button'; bRm.className='button button-small sai-remove'; bRm.style.cssText='margin-left:6px;color:#a00'; bRm.title='Rimuovi'; bRm.innerHTML='&#10005;';
+				li.appendChild(pos); li.appendChild(strong); li.appendChild(prov); li.appendChild(code); li.appendChild(spacer); li.appendChild(bUp); li.appendChild(bDn); li.appendChild(bRm);
 				list.appendChild(li);
-				updatePositions();
-				sync();
+				updatePositions(); syncModels();
 			});
+			syncModels();
+		}
 
-			sync();
-
-		// Test connessione AI
+		// ── Test connessione AI ───────────────────────────────────────────────
 		var testBtn    = document.getElementById('sai-test-btn');
 		var testResult = document.getElementById('sai-test-result');
-
 		if (testBtn && testResult) {
 			testBtn.addEventListener('click', function () {
-				testBtn.disabled    = true;
+				testBtn.disabled = true;
 				testBtn.textContent = '<?php echo esc_js( __( 'Test in corso…', 'semantic-ai' ) ); ?>';
 				testResult.style.display = 'none';
-
-				var formData = new FormData();
-				formData.append('action', 'sai_test_ai_connection');
-				formData.append('nonce',  testBtn.dataset.nonce);
-
-				fetch(ajaxurl, { method: 'POST', body: formData, credentials: 'same-origin' })
-					.then(function (r) { return r.json(); })
-					.then(function (data) {
+				var fd = new FormData();
+				fd.append('action', 'sai_test_ai_connection');
+				fd.append('nonce',  testBtn.dataset.nonce);
+				fetch(ajaxurl, { method:'POST', body:fd, credentials:'same-origin' })
+					.then(function(r){ return r.json(); })
+					.then(function(data){
 						testResult.style.display = 'inline';
 						if (data.success) {
-							testResult.style.color   = '#0a7a0a';
-							testResult.style.fontWeight = 'bold';
-							testResult.textContent   = '✓ ' + (data.data.message || 'OK');
+							testResult.style.color = '#0a7a0a'; testResult.style.fontWeight = 'bold';
+							testResult.textContent = '✓ ' + (data.data.message || 'OK');
 						} else {
-							testResult.style.color   = '#a00';
-							testResult.style.fontWeight = 'normal';
-							testResult.textContent   = '✗ ' + (typeof data.data === 'string' ? data.data : 'Errore sconosciuto');
+							testResult.style.color = '#a00'; testResult.style.fontWeight = 'normal';
+							testResult.textContent = '✗ ' + (typeof data.data === 'string' ? data.data : 'Errore sconosciuto');
 						}
 					})
-					.catch(function (e) {
-						testResult.style.display   = 'inline';
-						testResult.style.color     = '#a00';
-						testResult.style.fontWeight = 'normal';
-						testResult.textContent     = '✗ Errore di rete: ' + e.message;
+					.catch(function(e){
+						testResult.style.display = 'inline'; testResult.style.color = '#a00'; testResult.style.fontWeight = 'normal';
+						testResult.textContent = '✗ Errore di rete: ' + e.message;
 					})
-					.finally(function () {
-						testBtn.disabled    = false;
+					.finally(function(){
+						testBtn.disabled = false;
 						testBtn.textContent = '<?php echo esc_js( __( 'Testa connessione AI', 'semantic-ai' ) ); ?>';
 					});
 			});
 		}
+
+		// ── Ripristina instruction predefinita ────────────────────────────────
+		var resetBtn    = document.getElementById('sai-reset-instruction-btn');
+		var resetResult = document.getElementById('sai-reset-result');
+		if (resetBtn) {
+			resetBtn.addEventListener('click', function () {
+				var fd = new FormData();
+				fd.append('action', 'sai_reset_instruction');
+				fd.append('nonce',  resetBtn.dataset.nonce);
+				fetch(ajaxurl, { method:'POST', body:fd, credentials:'same-origin' })
+					.then(function(r){ return r.json(); })
+					.then(function(data){
+						if (data.success) {
+							var ta = document.getElementById('sai_custom_system_instruction');
+							if (ta) { ta.value = ''; }
+							if (resetResult) {
+								resetResult.textContent = '<?php echo esc_js( __( '✓ Instruction ripristinata', 'semantic-ai' ) ); ?>';
+								resetResult.style.display = 'inline';
+								setTimeout(function(){ resetResult.style.display = 'none'; }, 3000);
+							}
+						}
+					});
+			});
+		}
+
+		// ── Log analisi ───────────────────────────────────────────────────────
+		var clearLogBtn = document.getElementById('sai-clear-log-btn');
+		if (clearLogBtn) {
+			clearLogBtn.addEventListener('click', function () {
+				if (!confirm('<?php echo esc_js( __( 'Svuotare il log analisi? L\'operazione non è reversibile.', 'semantic-ai' ) ); ?>')) { return; }
+				var fd = new FormData();
+				fd.append('action', 'sai_clear_log');
+				fd.append('nonce',  clearLogBtn.dataset.nonce);
+				fetch(ajaxurl, { method:'POST', body:fd, credentials:'same-origin' })
+					.then(function(r){ return r.json(); })
+					.then(function(data){ if (data.success) { location.reload(); } });
+			});
+		}
+
+		var logModal       = document.getElementById('sai-log-modal');
+		var logModalClose  = document.getElementById('sai-log-modal-close');
+		var logResultBox   = document.getElementById('sai-log-result-content');
+
+		document.querySelectorAll('.sai-view-result').forEach(function (btn) {
+			btn.addEventListener('click', function () {
+				var fd = new FormData();
+				fd.append('action', 'sai_get_log_result');
+				fd.append('nonce',  btn.dataset.nonce);
+				fd.append('id',     btn.dataset.id);
+				fetch(ajaxurl, { method:'POST', body:fd, credentials:'same-origin' })
+					.then(function(r){ return r.json(); })
+					.then(function(data){
+						if (data.success && logModal && logResultBox) {
+							logResultBox.innerHTML = '';
+							var result = data.data;
+							// Render link suggestions
+							if (result.links && result.links.length > 0) {
+								var h3l = document.createElement('h3'); h3l.textContent = '<?php echo esc_js( __( 'Link suggeriti', 'semantic-ai' ) ); ?> (' + result.links.length + ')';
+								logResultBox.appendChild(h3l);
+								result.links.forEach(function(link, i) {
+									var p = document.createElement('p');
+									p.style.cssText = 'background:#f6f6f6;padding:8px;border-radius:3px;margin-bottom:6px;font-size:13px;';
+									p.innerHTML = '<strong>' + (i+1) + '. «' + (link.anchorText||'') + '»</strong>'
+										+ ' → <a href="' + (link.url||'#') + '" target="_blank">' + (link.title||link.url||'') + '</a>'
+										+ (link.rationale ? '<br><em style="color:#666;">' + link.rationale + '</em>' : '');
+									logResultBox.appendChild(p);
+								});
+							}
+							// Render emphasis suggestions
+							if (result.emphasis && result.emphasis.length > 0) {
+								var h3e = document.createElement('h3'); h3e.textContent = '<?php echo esc_js( __( 'Enfasi suggerite', 'semantic-ai' ) ); ?> (' + result.emphasis.length + ')';
+								logResultBox.appendChild(h3e);
+								result.emphasis.forEach(function(emph, i) {
+									var p = document.createElement('p');
+									p.style.cssText = 'background:#f6f6f6;padding:8px;border-radius:3px;margin-bottom:6px;font-size:13px;';
+									p.innerHTML = '<strong>' + (i+1) + '. «' + (emph.phrase||'') + '»</strong>'
+										+ ' (' + (emph.format||'') + ')'
+										+ (emph.rationale ? '<br><em style="color:#666;">' + emph.rationale + '</em>' : '');
+									logResultBox.appendChild(p);
+								});
+							}
+							if ((!result.links || result.links.length === 0) && (!result.emphasis || result.emphasis.length === 0)) {
+								logResultBox.textContent = '<?php echo esc_js( __( 'Nessun suggerimento trovato in questa analisi.', 'semantic-ai' ) ); ?>';
+							}
+							logModal.style.display = 'block';
+						}
+					});
+			});
+		});
+
+		if (logModalClose && logModal) {
+			logModalClose.addEventListener('click', function(){ logModal.style.display = 'none'; });
+			logModal.addEventListener('click', function(e){ if (e.target === logModal) { logModal.style.display = 'none'; } });
+		}
+
 		})();
 		</script>
 		<?php
 	}
+
+	// ──────────────────────────────────────────────────────────────────────────
+	// Sanitize callbacks
+	// ──────────────────────────────────────────────────────────────────────────
 
 	/**
 	 * Sanitizza un intero positivo.
@@ -717,10 +1017,8 @@ class SettingsPage {
 		}
 
 		$valid = [];
-
 		foreach ( $value as $type ) {
 			$type = sanitize_key( (string) $type );
-
 			if ( '' !== $type && post_type_exists( $type ) ) {
 				$valid[] = $type;
 			}
@@ -730,8 +1028,7 @@ class SettingsPage {
 	}
 
 	/**
-	 * Sanitizza le preferenze modelli: decodifica il JSON inviato dal form
-	 * e valida ogni ID contro il catalogo noto.
+	 * Sanitizza le preferenze modelli: decodifica il JSON e valida ogni ID contro il catalogo.
 	 *
 	 * @param mixed $value Stringa JSON ricevuta dal campo hidden.
 	 * @return string[] Array ordinato di model ID validi.
@@ -744,7 +1041,6 @@ class SettingsPage {
 		}
 
 		$decoded = json_decode( $value, true );
-
 		if ( ! is_array( $decoded ) ) {
 			return self::DEFAULT_MODEL_PREFERENCES;
 		}

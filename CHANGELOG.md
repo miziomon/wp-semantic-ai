@@ -7,6 +7,30 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-29
+
+### Added
+
+- **Feedback multi-step nella modale di analisi**: al click su "Analizza link interni" la modale mostra in tempo reale tre step con stato (loading/done/error): "Raccolta blocchi: trovati N blocchi", "Candidati trovati: X articoli", "Analisi completata". Richiede il nuovo endpoint REST `GET /semantic-ai/v1/prepare`.
+- **Endpoint REST `GET /semantic-ai/v1/prepare`** (`PrepareController.php`): interroga `CandidateProvider` e restituisce `{candidateCount: N}`. Usato dalla sidebar per mostrare il conteggio candidati prima della chiamata AI.
+- **Pulsante "Rieffettua analisi"** nel footer della modale, accanto ad "Annulla" e "Applica selezionati". Rilancia l'analisi senza chiudere la modale.
+- **Pagina Impostazioni con sistema di TAB** (5 tab): Analisi, Modelli AI (include Diagnostica), Prompt, Aggiornamenti, Log analisi.
+- **TAB Prompt**: textarea per system instruction personalizzata con supporto placeholder `{language}`, `{max_links}`, `{max_emphasis}`. Pulsante "Ripristina predefinita" che svuota la custom instruction via AJAX. Sezione espandibile che mostra l'instruction predefinita.
+- **TAB Log analisi**: tabella delle ultime 50 analisi eseguite (post, data, candidati, link trovati, enfasi, provenienza cache). Pulsante "Visualizza" apre un modal inline con i suggerimenti dettagliati. Pulsante "Svuota log".
+- **`AnalysisLog.php`**: nuova classe per archiviare il log analisi tramite WordPress Options API (autoload off, max 50 voci).
+- **Campo "Timeout AI (secondi)"** nel TAB Analisi (default 120, range 30–300). Aggiunge `http_request_timeout` filter intorno a `generate_text()` per evitare l'errore "cURL error 28: Operation timed out" su articoli lunghi.
+
+### Changed
+
+- `blocks.js`: rimosso `core/heading` dai tipi di blocco analizzati (era incluso ma i titoli non sono rilevanti per il link interni semantici).
+- `LinkSuggester::suggest()`: aggiunge flag runtime `_from_cache` al risultato (rimosso da `SuggestController` prima della risposta REST, usato solo per il log).
+- `PromptBuilder::build_system_instruction()`: se è presente un'instruction personalizzata in `sai_custom_system_instruction`, la usa al posto di quella predefinita (con sostituzione dei placeholder).
+- La pagina Impostazioni passa da 4 sezioni flat a 5 tab navigabili via URL (`?page=semantic-ai&tab=X`).
+
+### Fixed
+
+- PHPStan: rimossi tutti i `return;` dopo `wp_send_json_error()` e `wp_send_json_success()` nei metodi AJAX (erano "Unreachable statement" perché le funzioni sono `@return never`).
+
 ## [0.2.7] - 2026-05-28
 
 ### Fixed
@@ -101,7 +125,8 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Filtri di estensione: `SAI_candidates`, `SAI_system_instruction`, `SAI_suggestion_validate_link`.
 - Tooling: `@wordpress/scripts`, `@wordpress/env`, PHPCS (WPCS), PHPStan livello 8 con stubs WP 7.0.
 
-[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.7...HEAD
+[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.7...v0.3.0
 [0.2.7]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.6...v0.2.7
 [0.2.6]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.4...v0.2.5

@@ -60,8 +60,8 @@ class Updater {
 
 		// Invalida il transient GitHub in tutti i percorsi di force-check WP:
 		// - wp_clean_plugins_cache → scatta da alcuni contesti admin
-		// - delete_site_transient_update_plugins → scatta sempre quando WP
-		//   elimina il transient update_plugins (es. update-core.php?force-check=1)
+		// - delete_site_transient_update_plugins → scatta quando WP
+		// elimina il transient update_plugins (es. update-core.php?force-check=1).
 		add_action( 'wp_clean_plugins_cache', [ $this, 'purge_cache_on_force_check' ] );
 		add_action( 'delete_site_transient_update_plugins', [ $this, 'purge_cache_on_force_check' ] );
 

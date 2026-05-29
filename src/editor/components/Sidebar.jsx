@@ -1,5 +1,5 @@
 /**
- * Sidebar Gutenberg del plugin — pulsante di analisi e gestione stato.
+ * Sidebar Gutenberg del plugin — pulsante di analisi e gestione stato multi-step.
  */
 
 import { useState, useCallback } from '@wordpress/element';
@@ -14,7 +14,7 @@ import {
 } from '@wordpress/editor';
 import { useSelect } from '@wordpress/data';
 import { __ } from '@wordpress/i18n';
-import { fetchSuggestions } from '../lib/api';
+import { fetchPrepare, fetchSuggestions } from '../lib/api';
 import { getTextBlocks } from '../lib/blocks';
 import SuggestionModal from './SuggestionModal';
 import { applyAllSuggestions } from '../lib/apply';
@@ -26,37 +26,89 @@ const SIDEBAR_NAME = `${ PLUGIN_NAME }/sidebar`;
 const providerAvailable = window.silData?.providerAvailable ?? true;
 
 export default function Sidebar() {
-	const [ isModalOpen,  setIsModalOpen ]  = useState( false );
-	const [ isLoading,    setIsLoading ]    = useState( false );
-	const [ error,        setError ]        = useState( '' );
-	const [ links,        setLinks ]        = useState( [] );
-	const [ emphasis,     setEmphasis ]     = useState( [] );
+	const [ isModalOpen, setIsModalOpen ] = useState( false );
+	const [ steps,       setSteps ]       = useState( [] );
+	const [ error,       setError ]       = useState( '' );
+	const [ links,       setLinks ]       = useState( [] );
+	const [ emphasis,    setEmphasis ]    = useState( [] );
 	/** Mappa blockIndex → clientId, aggiornata ad ogni analisi. */
-	const [ blockMap,     setBlockMap ]     = useState( {} );
+	const [ blockMap,    setBlockMap ]    = useState( {} );
 
 	const postId = useSelect(
 		( select ) => select( 'core/editor' ).getCurrentPostId(),
 		[]
 	);
 
+	/** Aggiunge uno step in coda e restituisce il suo indice nell'array corrente. */
+	const appendStep = useCallback( ( text ) => {
+		let newIndex = 0;
+		setSteps( ( prev ) => {
+			newIndex = prev.length;
+			return [ ...prev, { text, status: 'loading' } ];
+		} );
+		return newIndex;
+	}, [] );
+
+	/** Aggiorna status e/o testo di uno step per indice. */
+	const patchStep = useCallback( ( index, patch ) => {
+		setSteps( ( prev ) =>
+			prev.map( ( s, i ) => ( i === index ? { ...s, ...patch } : s ) )
+		);
+	}, [] );
+
+	const isLoading = steps.some( ( s ) => s.status === 'loading' );
+
 	const handleAnalyze = useCallback( async () => {
+		// Reset completo dello stato.
 		setError( '' );
-		setIsLoading( true );
+		setLinks( [] );
+		setEmphasis( [] );
+		setSteps( [] );
 		setIsModalOpen( true );
 
 		try {
+			// ── Step 1: raccolta blocchi ─────────────────────────────────────
+			let stepIdx = 0;
+			setSteps( [ { text: __( 'Raccolta blocchi testuali…', 'semantic-ai' ), status: 'loading' } ] );
+
 			const blocks = getTextBlocks();
 
 			if ( blocks.length === 0 ) {
+				setSteps( [ { text: __( 'Nessun blocco testuale trovato nel post.', 'semantic-ai' ), status: 'error' } ] );
 				setError( __( 'Nessun blocco testuale trovato nel post.', 'semantic-ai' ) );
-				setIsLoading( false );
 				return;
 			}
 
-			/** Mappa index → clientId per l'applicazione successiva. */
 			const map = {};
 			blocks.forEach( ( b ) => { map[ b.index ] = b.clientId; } );
 			setBlockMap( map );
+
+			setSteps( ( prev ) =>
+				prev.map( ( s, i ) => i === stepIdx ? {
+					...s,
+					status: 'done',
+					text: __( 'Raccolta blocchi:', 'semantic-ai' ) + ' ' + blocks.length + ' ' + __( 'blocchi trovati', 'semantic-ai' ),
+				} : s )
+			);
+
+			// ── Step 2: ricerca candidati ────────────────────────────────────
+			stepIdx = 1;
+			setSteps( ( prev ) => [ ...prev, { text: __( 'Ricerca contenuti candidati…', 'semantic-ai' ), status: 'loading' } ] );
+
+			const prepareData    = await fetchPrepare( postId );
+			const candidateCount = prepareData?.candidateCount ?? 0;
+
+			setSteps( ( prev ) =>
+				prev.map( ( s, i ) => i === stepIdx ? {
+					...s,
+					status: 'done',
+					text: __( 'Candidati trovati:', 'semantic-ai' ) + ' ' + candidateCount + ' ' + __( 'articoli', 'semantic-ai' ),
+				} : s )
+			);
+
+			// ── Step 3: analisi AI ───────────────────────────────────────────
+			stepIdx = 2;
+			setSteps( ( prev ) => [ ...prev, { text: __( 'Analisi AI in corso…', 'semantic-ai' ), status: 'loading' } ] );
 
 			const result = await fetchSuggestions(
 				postId,
@@ -64,21 +116,45 @@ export default function Sidebar() {
 			);
 
 			if ( result.error ) {
+				setSteps( ( prev ) =>
+					prev.map( ( s, i ) => i === stepIdx ? { ...s, status: 'error', text: __( 'Errore durante l\'analisi AI.', 'semantic-ai' ) } : s )
+				);
 				setError( result.error );
 			} else {
-				setLinks( result.links ?? [] );
-				setEmphasis( result.emphasis ?? [] );
+				const foundLinks    = result.links ?? [];
+				const foundEmphasis = result.emphasis ?? [];
+				setSteps( ( prev ) =>
+					prev.map( ( s, i ) => i === stepIdx ? {
+						...s,
+						status: 'done',
+						text: __( 'Analisi completata:', 'semantic-ai' ) + ' ' + foundLinks.length + ' ' + __( 'link', 'semantic-ai' ) + ', ' + foundEmphasis.length + ' ' + __( 'enfasi', 'semantic-ai' ),
+					} : s )
+				);
+				setLinks( foundLinks );
+				setEmphasis( foundEmphasis );
 			}
 		} catch ( err ) {
+			// Segna l'ultimo step in loading come errore.
+			setSteps( ( prev ) => {
+				const lastLoadingIdx = [ ...prev ].reverse().findIndex( ( s ) => s.status === 'loading' );
+				if ( lastLoadingIdx === -1 ) {
+					return [ ...prev, { text: __( 'Errore imprevisto.', 'semantic-ai' ), status: 'error' } ];
+				}
+				const realIdx = prev.length - 1 - lastLoadingIdx;
+				return prev.map( ( s, i ) => i === realIdx ? { ...s, status: 'error' } : s );
+			} );
+
 			if ( err.message === 'sai_no_provider' ) {
 				setError( __( 'Nessun provider AI configurato. Configura un provider in Impostazioni → Connettori.', 'semantic-ai' ) );
 			} else {
 				setError( err.message ?? __( 'Errore durante l\'analisi.', 'semantic-ai' ) );
 			}
-		} finally {
-			setIsLoading( false );
 		}
 	}, [ postId ] );
+
+	const handleReanalyze = useCallback( () => {
+		handleAnalyze();
+	}, [ handleAnalyze ] );
 
 	const handleApply = useCallback( ( selected ) => {
 		applyAllSuggestions( selected, blockMap );
@@ -127,12 +203,13 @@ export default function Sidebar() {
 
 			<SuggestionModal
 				isOpen={ isModalOpen }
-				isLoading={ isLoading }
+				steps={ steps }
 				error={ error }
 				links={ links }
 				emphasis={ emphasis }
 				onApply={ handleApply }
 				onClose={ handleClose }
+				onReanalyze={ handleReanalyze }
 			/>
 		</>
 	);

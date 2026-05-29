@@ -30,18 +30,25 @@ class PromptBuilder {
 	public function build_system_instruction( string $language_hint = 'italiano' ): string {
 		$max_links    = (int) Plugin::get_option( 'max_links' );
 		$max_emphasis = (int) Plugin::get_option( 'max_emphasis' );
+		$custom       = (string) Plugin::get_option( 'custom_system_instruction' );
+
+		if ( '' !== $custom ) {
+			$instruction = str_replace(
+				[ '{language}', '{max_links}', '{max_emphasis}' ],
+				[ $language_hint, (string) $max_links, (string) $max_emphasis ],
+				$custom
+			);
+		} else {
+			$instruction = $this->default_instruction( $language_hint, $max_links, $max_emphasis );
+		}
 
 		/**
 		 * Permette di personalizzare la system instruction tramite filtro.
 		 *
-		 * @param string $instruction Instruction di default.
+		 * @param string $instruction Instruction corrente (custom o default).
 		 * @param string $language_hint Hint sulla lingua del contenuto.
 		 */
-		$instruction = apply_filters(
-			'sai_system_instruction',
-			$this->default_instruction( $language_hint, $max_links, $max_emphasis ),
-			$language_hint
-		);
+		$instruction = apply_filters( 'sai_system_instruction', $instruction, $language_hint );
 
 		/* @var string $instruction */
 		return $instruction;

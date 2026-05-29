@@ -148,6 +148,14 @@ class SuggestController {
 			return $result;
 		}
 
+		// Estrae il flag runtime _from_cache (non deve uscire nella risposta REST).
+		$from_cache = (bool) ( $result['_from_cache'] ?? false );
+		unset( $result['_from_cache'] );
+
+		// Registra l'analisi nel log.
+		$log = new \Mavida\SemanticInternalLinks\Ai\AnalysisLog();
+		$log->add( $post_id, $result, count( $candidates ), $from_cache );
+
 		return rest_ensure_response( $result );
 	}
 

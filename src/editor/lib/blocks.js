@@ -1,14 +1,13 @@
 /**
  * Raccoglie i blocchi testuali dall'editor Gutenberg.
  *
- * Tipi inclusi: paragraph, heading, list-item, quote.
- * Tipi esclusi: code, preformatted, html, embed, media.
+ * Tipi inclusi: paragraph, list-item, quote.
+ * Tipi esclusi: heading, code, preformatted, html, embed, media.
  */
 
 /** Tipi di blocco da analizzare. */
 const SUPPORTED_BLOCK_TYPES = new Set( [
 	'core/paragraph',
-	'core/heading',
 	'core/list-item',
 	'core/quote',
 ] );

@@ -52,6 +52,10 @@ final class Plugin {
 		add_filter( 'plugin_row_meta', [ $this, 'add_row_meta' ], 10, 2 );
 		// Test AJAX connessione AI dalla pagina impostazioni.
 		add_action( 'wp_ajax_sai_test_ai_connection', [ $this, 'handle_test_ai_connection' ] );
+		// Log analisi.
+		add_action( 'wp_ajax_sai_reset_instruction', [ $this, 'handle_reset_instruction' ] );
+		add_action( 'wp_ajax_sai_clear_log', [ $this, 'handle_clear_log' ] );
+		add_action( 'wp_ajax_sai_get_log_result', [ $this, 'handle_get_log_result' ] );
 	}
 
 	/**
@@ -126,20 +130,27 @@ final class Plugin {
 		);
 	}
 
-	/** Registra le route REST tramite SuggestController. */
+	/** Registra le route REST tramite SuggestController e PrepareController. */
 	public function register_rest_routes(): void {
-		$controller = new \Mavida\SemanticInternalLinks\Rest\SuggestController(
+		$candidate_provider = new \Mavida\SemanticInternalLinks\Content\CandidateProvider(
+			new \Mavida\SemanticInternalLinks\Content\KeywordExtractor()
+		);
+
+		$suggest_controller = new \Mavida\SemanticInternalLinks\Rest\SuggestController(
 			new \Mavida\SemanticInternalLinks\Ai\LinkSuggester(
 				new \Mavida\SemanticInternalLinks\Ai\PromptBuilder(),
 				new \Mavida\SemanticInternalLinks\Ai\SuggestionCache(),
 				new \Mavida\SemanticInternalLinks\Ai\ResponseValidator()
 			),
-			new \Mavida\SemanticInternalLinks\Content\CandidateProvider(
-				new \Mavida\SemanticInternalLinks\Content\KeywordExtractor()
-			)
+			$candidate_provider
 		);
 
-		$controller->register();
+		$prepare_controller = new \Mavida\SemanticInternalLinks\Rest\PrepareController(
+			$candidate_provider
+		);
+
+		$suggest_controller->register();
+		$prepare_controller->register();
 	}
 
 	/** Registra la pagina delle impostazioni tramite SettingsPage. */
@@ -183,33 +194,73 @@ final class Plugin {
 		return $links;
 	}
 
+	/** Ripristina la system instruction personalizzata eliminando l'opzione salvata. */
+	public function handle_reset_instruction(): void {
+		check_ajax_referer( 'sai_reset_instruction', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Non autorizzato.', 'semantic-ai' ) );
+		}
+
+		delete_option( 'sai_custom_system_instruction' );
+		wp_send_json_success();
+	}
+
+	/** Svuota il log delle analisi. */
+	public function handle_clear_log(): void {
+		check_ajax_referer( 'sai_clear_log', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Non autorizzato.', 'semantic-ai' ) );
+		}
+
+		$log = new \Mavida\SemanticInternalLinks\Ai\AnalysisLog();
+		$log->clear();
+		wp_send_json_success();
+	}
+
+	/** Restituisce il risultato completo di una voce del log. */
+	public function handle_get_log_result(): void {
+		check_ajax_referer( 'sai_get_log_result', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'Non autorizzato.', 'semantic-ai' ) );
+		}
+
+		$id     = sanitize_text_field( wp_unslash( (string) ( $_POST['id'] ?? '' ) ) );
+		$log    = new \Mavida\SemanticInternalLinks\Ai\AnalysisLog();
+		$result = $log->get_result( $id );
+
+		if ( null === $result ) {
+			wp_send_json_error( __( 'Risultato non trovato.', 'semantic-ai' ) );
+		}
+
+		wp_send_json_success( $result );
+	}
+
 	/** Gestisce il test AJAX della connessione al provider AI configurato. */
 	public function handle_test_ai_connection(): void {
 		check_ajax_referer( 'sai_test_ai', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( __( 'Non autorizzato.', 'semantic-ai' ) );
-			return;
 		}
 
 		if ( ! function_exists( 'wp_ai_client_prompt' ) ) {
 			wp_send_json_error( __( 'WP AI Client non disponibile. Richiede WordPress 7.0+.', 'semantic-ai' ) );
-			return;
 		}
 
 		$builder = wp_ai_client_prompt( 'Reply with the single word OK and nothing else.' );
 
 		if ( is_wp_error( $builder ) ) {
 			wp_send_json_error( $builder->get_error_message() );
-			return;
 		}
 
 		if ( ! $builder->is_supported_for_text_generation() ) {
 			wp_send_json_error( __( 'Nessun provider AI configurato. Vai in Impostazioni → Connettori AI.', 'semantic-ai' ) );
-			return;
 		}
 
-		$raw_prefs   = self::get_option( 'model_preferences' );
+		$raw_prefs = self::get_option( 'model_preferences' );
 		/* @var string[] $model_prefs */
 		$model_prefs = ( is_array( $raw_prefs ) && count( $raw_prefs ) > 0 )
 			? array_values( array_map( 'strval', $raw_prefs ) )
@@ -221,13 +272,14 @@ final class Plugin {
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( $result->get_error_message() );
-			return;
 		}
 
-		wp_send_json_success( [
-			'message'  => __( 'Connessione AI funzionante.', 'semantic-ai' ),
-			'response' => sanitize_text_field( (string) $result ),
-		] );
+		wp_send_json_success(
+			[
+				'message'  => __( 'Connessione AI funzionante.', 'semantic-ai' ),
+				'response' => sanitize_text_field( (string) $result ),
+			]
+		);
 	}
 
 	/**
@@ -238,14 +290,16 @@ final class Plugin {
 	 */
 	public static function get_option( string $key ): mixed {
 		$defaults = [
-			'max_candidates'        => 50,
-			'max_links'             => 8,
-			'max_emphasis'          => 10,
-			'chunk_threshold_chars' => 20000,
-			'target_post_types'     => [ 'post', 'page' ],
-			'cache_ttl'             => DAY_IN_SECONDS,
-			'model_preferences'       => [ 'claude-sonnet-4-6', 'gemini-3.5-flash', 'gpt-4.1' ],
-			'update_check_interval'   => 4,
+			'max_candidates'            => 50,
+			'max_links'                 => 8,
+			'max_emphasis'              => 10,
+			'chunk_threshold_chars'     => 20000,
+			'target_post_types'         => [ 'post', 'page' ],
+			'cache_ttl'                 => DAY_IN_SECONDS,
+			'model_preferences'         => [ 'claude-sonnet-4-6', 'gemini-3.5-flash', 'gpt-4.1' ],
+			'update_check_interval'     => 4,
+			'ai_request_timeout'        => 120,
+			'custom_system_instruction' => '',
 		];
 
 		$value = get_option( 'sai_' . $key, $defaults[ $key ] ?? null );
