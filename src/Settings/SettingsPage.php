@@ -255,6 +255,7 @@ class SettingsPage {
 			'sai_target_post_types'         => [ $this, 'sanitize_post_types' ],
 			'sai_cache_ttl'                 => [ $this, 'sanitize_positive_int' ],
 			'sai_ai_request_timeout'        => [ $this, 'sanitize_positive_int' ],
+			'sai_max_blocks_per_chunk'      => [ $this, 'sanitize_positive_int' ],
 			'sai_model_preferences'         => [ $this, 'sanitize_model_preferences' ],
 			'sai_update_check_interval'     => [ $this, 'sanitize_positive_int' ],
 			'sai_custom_system_instruction' => 'sanitize_textarea_field',
@@ -353,6 +354,18 @@ class SettingsPage {
 					'min'         => 30,
 					'max'         => 300,
 					'description' => __( 'Timeout massimo per la chiamata HTTP al provider AI (30–300 secondi). Aumentare se si verificano errori di timeout su articoli lunghi.', 'semantic-ai' ),
+				],
+			],
+			[
+				'id'       => 'sai_max_blocks_per_chunk',
+				'label'    => __( 'Blocchi per richiesta AI', 'semantic-ai' ),
+				'callback' => 'render_number_field',
+				'args'     => [
+					'option'      => 'sai_max_blocks_per_chunk',
+					'default'     => 8,
+					'min'         => 2,
+					'max'         => 20,
+					'description' => __( 'Quanti blocchi inviare in ogni richiesta al modello AI (2–20). Valori più bassi evitano errori di timeout su articoli lunghi.', 'semantic-ai' ),
 				],
 			],
 		];

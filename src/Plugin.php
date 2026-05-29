@@ -56,6 +56,7 @@ final class Plugin {
 		add_action( 'wp_ajax_sai_reset_instruction', [ $this, 'handle_reset_instruction' ] );
 		add_action( 'wp_ajax_sai_clear_log', [ $this, 'handle_clear_log' ] );
 		add_action( 'wp_ajax_sai_get_log_result', [ $this, 'handle_get_log_result' ] );
+		add_action( 'wp_ajax_sai_log_analysis', [ $this, 'handle_log_analysis' ] );
 	}
 
 	/**
@@ -112,13 +113,16 @@ final class Plugin {
 			SAI_PLUGIN_DIR . 'languages'
 		);
 
-		// Passa al JS i dati di bootstrap (flag provider, nonce REST).
+		// Passa al JS i dati di bootstrap.
 		wp_localize_script(
 			'semantic-ai-editor',
 			'silData',
 			[
-				'restUrl' => esc_url_raw( rest_url( 'semantic-ai/v1' ) ),
-				'nonce'   => wp_create_nonce( 'wp_rest' ),
+				'restUrl'           => esc_url_raw( rest_url( 'semantic-ai/v1' ) ),
+				'nonce'             => wp_create_nonce( 'wp_rest' ),
+				'ajaxUrl'           => admin_url( 'admin-ajax.php' ),
+				'logNonce'          => wp_create_nonce( 'sai_log_analysis' ),
+				'maxBlocksPerChunk' => (int) self::get_option( 'max_blocks_per_chunk' ),
 			]
 		);
 
@@ -192,6 +196,54 @@ final class Plugin {
 			esc_html__( 'GitHub', 'semantic-ai' )
 		);
 		return $links;
+	}
+
+	/**
+	 * Registra nel log un'analisi completata dal client (chunking lato JS).
+	 * Viene chiamato una sola volta alla fine dell'analisi multi-chunk,
+	 * con i risultati merged accurati.
+	 */
+	public function handle_log_analysis(): void {
+		check_ajax_referer( 'sai_log_analysis', 'nonce' );
+
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error( __( 'Non autorizzato.', 'semantic-ai' ) );
+		}
+
+		$post_id         = absint( $_POST['postId'] ?? 0 );
+		$candidate_count = absint( $_POST['candidateCount'] ?? 0 );
+		$from_cache      = sanitize_text_field( wp_unslash( (string) ( $_POST['fromCache'] ?? '0' ) ) ) === '1';
+
+		/* @var array<mixed>|null $raw_links */
+		$raw_links = json_decode( wp_unslash( (string) ( $_POST['links'] ?? '[]' ) ), true ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+
+		/* @var array<mixed>|null $raw_emphasis */
+		$raw_emphasis = json_decode( wp_unslash( (string) ( $_POST['emphasis'] ?? '[]' ) ), true ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+
+		/* @var array<mixed>|null $raw_candidates */
+		$raw_candidates = json_decode( wp_unslash( (string) ( $_POST['candidates'] ?? '[]' ) ), true ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+
+		$links      = is_array( $raw_links ) ? $raw_links : [];
+		$emphasis   = is_array( $raw_emphasis ) ? $raw_emphasis : [];
+		$candidates = is_array( $raw_candidates ) ? $raw_candidates : [];
+
+		if ( $post_id <= 0 ) {
+			wp_send_json_error( __( 'ID post non valido.', 'semantic-ai' ) );
+		}
+
+		$log = new \Mavida\SemanticInternalLinks\Ai\AnalysisLog();
+		$log->add(
+			$post_id,
+			[
+				'links'    => $links,
+				'emphasis' => $emphasis,
+			],
+			$candidate_count,
+			$from_cache,
+			$candidates
+		);
+
+		wp_send_json_success();
 	}
 
 	/** Ripristina la system instruction personalizzata eliminando l'opzione salvata. */
@@ -300,6 +352,7 @@ final class Plugin {
 			'update_check_interval'     => 4,
 			'ai_request_timeout'        => 120,
 			'custom_system_instruction' => '',
+			'max_blocks_per_chunk'      => 8,
 		];
 
 		$value = get_option( 'sai_' . $key, $defaults[ $key ] ?? null );

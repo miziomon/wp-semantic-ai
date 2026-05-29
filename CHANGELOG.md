@@ -7,6 +7,24 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-05-29
+
+### Added
+
+- **Chunking client-side con progresso per chunk**: il JS divide i blocchi in gruppi configurabili (default 8) e li invia in N chiamate REST sequenziali, ognuna visibile nel modal con avanzamento dettagliato: "Chunk N/T: blocchi X–Y, trovati K link, J enfasi · totale: …".
+- **Campo "Blocchi per richiesta AI"** nel TAB Analisi delle impostazioni (2–20, default 8): controlla quanti blocchi vengono inviati per ogni singola chiamata al modello AI.
+- **AJAX `sai_log_analysis`**: endpoint per registrare nel log il risultato merged dopo chunking multi-richiesta (statistiche accurate — non quelle dell'ultimo chunk).
+
+### Fixed
+
+- **Timeout cURL error 28 (30 secondi)**: il WP AI Client usa un timeout interno hardcoded che non è influenzato dal filtro `http_request_timeout`. Con il chunking client-side ogni richiesta contiene pochi blocchi e si completa ampiamente entro 30 secondi.
+
+### Changed
+
+- `LinkSuggester::suggest()`: quando `$total_blocks_override > 0` (client sta facendo chunking), salta il chunking server-side e usa `$total_blocks_override` per la validazione dei `blockIndex`.
+- `SuggestController::handle()`: quando `totalBlocks > count(blocks)` nel body, salta il logging (gestito lato client con `sai_log_analysis`).
+- Articoli con un solo chunk (≤ N blocchi) si comportano esattamente come v0.3.1: nessun cambiamento nell'UX.
+
 ## [0.3.1] - 2026-05-29
 
 ### Fixed
@@ -142,7 +160,8 @@ e il progetto adotta [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Filtri di estensione: `SAI_candidates`, `SAI_system_instruction`, `SAI_suggestion_validate_link`.
 - Tooling: `@wordpress/scripts`, `@wordpress/env`, PHPCS (WPCS), PHPStan livello 8 con stubs WP 7.0.
 
-[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/miziomon/wp-semantic-ai/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/miziomon/wp-semantic-ai/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/miziomon/wp-semantic-ai/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.7...v0.3.0
 [0.2.7]: https://github.com/miziomon/wp-semantic-ai/compare/v0.2.6...v0.2.7

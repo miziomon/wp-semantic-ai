@@ -140,8 +140,14 @@ class SuggestController {
 			);
 		}
 
+		// totalBlocks opzionale: quando presente il client sta facendo chunking lato JS.
+		// In questo caso si salta il chunking server-side e il logging
+		// (il client chiamerà sai_log_analysis una sola volta alla fine).
+		$total_blocks_override = (int) $request->get_param( 'totalBlocks' );
+		$client_is_chunking    = $total_blocks_override > 0 && $total_blocks_override > count( $blocks );
+
 		// Genera i suggerimenti tramite il WP AI Client.
-		$result = $this->suggester->suggest( $post_id, $blocks, $candidates );
+		$result = $this->suggester->suggest( $post_id, $blocks, $candidates, $total_blocks_override );
 
 		if ( is_wp_error( $result ) ) {
 			$result->add_data( [ 'status' => 503 ] );
@@ -152,9 +158,12 @@ class SuggestController {
 		$from_cache = (bool) ( $result['_from_cache'] ?? false );
 		unset( $result['_from_cache'] );
 
-		// Registra l'analisi nel log.
-		$log = new \Mavida\SemanticInternalLinks\Ai\AnalysisLog();
-		$log->add( $post_id, $result, count( $candidates ), $from_cache, $candidates );
+		// Registra il log solo se il client non sta gestendo il chunking.
+		// Con chunking JS il client chiama wp_ajax_sai_log_analysis al termine.
+		if ( ! $client_is_chunking ) {
+			$log = new \Mavida\SemanticInternalLinks\Ai\AnalysisLog();
+			$log->add( $post_id, $result, count( $candidates ), $from_cache, $candidates );
+		}
 
 		return rest_ensure_response( $result );
 	}
@@ -166,7 +175,12 @@ class SuggestController {
 	 */
 	private function get_args_schema(): array {
 		return [
-			'postId' => [
+			'totalBlocks' => [
+				'required'          => false,
+				'type'              => 'integer',
+				'sanitize_callback' => 'absint',
+			],
+			'postId'      => [
 				'required'          => true,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
@@ -186,7 +200,7 @@ class SuggestController {
 					return true;
 				},
 			],
-			'blocks' => [
+			'blocks'      => [
 				'required'          => true,
 				'type'              => 'array',
 				'items'             => [

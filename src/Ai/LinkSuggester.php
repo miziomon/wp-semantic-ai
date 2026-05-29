@@ -97,10 +97,13 @@ class LinkSuggester {
 	 *
 	 * @param int                                                                                      $post_id    ID del post da analizzare.
 	 * @param array<int, array{index: int, type: string, text: string}>                                $blocks     Blocchi testuali.
-	 * @param array<int, array{id: int, title: string, url: string, excerpt: string, terms: string[]}> $candidates Candidati link.
+	 * @param array<int, array{id: int, title: string, url: string, excerpt: string, terms: string[]}> $candidates            Candidati link.
+	 * @param int                                                                                      $total_blocks_override Quando > 0 il client sta facendo chunking:
+	 *                                                                                                                        salta il chunking server-side e usa questo
+	 *                                                                                                                        valore per validare i blockIndex.
 	 * @return array<string, mixed>|\WP_Error Suggerimenti validati ({links, emphasis}) oppure WP_Error.
 	 */
-	public function suggest( int $post_id, array $blocks, array $candidates ): array|\WP_Error {
+	public function suggest( int $post_id, array $blocks, array $candidates, int $total_blocks_override = 0 ): array|\WP_Error {
 		if ( ! $this->is_available() ) {
 			return new \WP_Error(
 				'sai_no_provider',
@@ -121,13 +124,20 @@ class LinkSuggester {
 			return $cached;
 		}
 
-		$threshold = (int) Plugin::get_option( 'chunk_threshold_chars' );
-
-		// Chunking: se il contenuto totale supera la soglia, analizza a blocchi.
-		if ( $threshold > 0 && strlen( $post_content ) > $threshold ) {
-			$result = $this->suggest_chunked( $blocks, $candidates, $locale, $threshold );
+		// Se il client sta gestendo il chunking lato JS (total_blocks_override > 0),
+		// salta il chunking server-side e usa total_blocks_override per la validazione
+		// dei blockIndex (che possono essere > count($blocks) se si tratta di un chunk).
+		if ( $total_blocks_override > 0 ) {
+			$result = $this->call_ai( $blocks, $candidates, $locale, $total_blocks_override );
 		} else {
-			$result = $this->call_ai( $blocks, $candidates, $locale, count( $blocks ) );
+			$threshold = (int) Plugin::get_option( 'chunk_threshold_chars' );
+
+			// Chunking server-side: fallback quando il client non gestisce i chunk.
+			if ( $threshold > 0 && strlen( $post_content ) > $threshold ) {
+				$result = $this->suggest_chunked( $blocks, $candidates, $locale, $threshold );
+			} else {
+				$result = $this->call_ai( $blocks, $candidates, $locale, count( $blocks ) );
+			}
 		}
 
 		if ( is_wp_error( $result ) ) {
